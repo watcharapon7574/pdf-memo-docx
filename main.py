@@ -6,6 +6,7 @@ import fitz  # PyMuPDF
 from PIL import Image
 import io
 import json
+import traceback
 
 def to_thai_digits(text):
     thai_digits = '๐๑๒๓๔๕๖๗๘๙'
@@ -61,6 +62,7 @@ def generate_pdf():
         convert(tmp_docx.name, tmp_pdf)
         return send_file(tmp_pdf, mimetype="application/pdf", as_attachment=True, download_name="memo.pdf")
     except Exception as e:
+        print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 @app.route('/add_signature', methods=['POST'])
@@ -129,6 +131,7 @@ def add_signature():
         pdf.close()
         return send_file(tmp_pdf.name, mimetype="application/pdf", as_attachment=True, download_name="signed.pdf")
     except Exception as e:
+        print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 @app.route('/generate_signed_pdf', methods=['POST'])
@@ -218,6 +221,7 @@ def generate_signed_pdf():
         pdf.close()
         return send_file(tmp_signed_pdf.name, mimetype="application/pdf", as_attachment=False)
     except Exception as e:
+        print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 if __name__ == "__main__":
