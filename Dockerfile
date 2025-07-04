@@ -6,8 +6,13 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libreoffice \
         fonts-thai-tlwg \
+        fontconfig \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# เพิ่มฟอนต์ราชการไทย (TH Sarabun New)
+COPY THSarabunNew.ttf /usr/share/fonts/truetype/
+RUN fc-cache -fv
 
 # กำหนด working directory
 WORKDIR /app
