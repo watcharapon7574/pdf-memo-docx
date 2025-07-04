@@ -1,7 +1,5 @@
 Flask
-python-docx
 docxtpl
-docx2pdf
+python-docx
 PyMuPDF
 Pillow
-gunicorn
