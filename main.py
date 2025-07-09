@@ -55,6 +55,25 @@ app = Flask(__name__)
 def generate_pdf():
     try:
         data = request.json or {}
+
+        # ===== เพิ่มส่วนนี้ =====
+        required_fields = [
+            "doc_number",
+            "date",
+            "subject",
+            "attachment_title",
+            "introduction",
+            "author_name",
+            "author_position",
+            "fact",
+            "proposal"
+        ]
+        # ตรวจสอบฟิลด์ที่ขาด หรือ ฟิลด์ที่เป็น "" (ว่าง)
+        missing = [f for f in required_fields if not data.get(f)]
+        if missing:
+            return jsonify({'error': f"Missing fields: {', '.join(missing)}"}), 400
+        # =====================
+
         # แปลงเลขใน dict เป็นเลขไทย
         def convert_dict(d):
             if isinstance(d, dict):
