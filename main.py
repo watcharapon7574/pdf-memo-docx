@@ -51,7 +51,6 @@ def draw_text_image(text, font_path, font_size=20, color=(2, 53, 139), scale=1):
         y += font.getbbox(line)[3] - font.getbbox(line)[1] + 2*scale
     return img
 
-app = Flask(__name__)
 
 # --- สร้าง PDF จาก template docx ---
 @app.route('/pdf', methods=['POST'])
