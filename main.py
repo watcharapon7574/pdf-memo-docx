@@ -8,7 +8,10 @@ from PIL import Image
 import io
 import json
 import traceback
+from flask_cors import CORS
 
+app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})
 # --- ฟังก์ชันแปลง docx → pdf ด้วย LibreOffice ---
 def convert_docx_to_pdf(docx_path, output_pdf_path):
     cmd = [
