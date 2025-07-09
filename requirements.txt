@@ -3,3 +3,4 @@ docxtpl
 python-docx
 PyMuPDF
 Pillow
+flask-cors
