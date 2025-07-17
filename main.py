@@ -39,16 +39,16 @@ def draw_text_image(text, font_path, font_size=20, color=(2, 53, 139), scale=1):
     from PIL import ImageFont, ImageDraw
     big_font_size = font_size * scale
     font = ImageFont.truetype(font_path, big_font_size)
-    padding = 4 * scale
+    padding = 12 * scale
     lines = text.split('\n')
     width = max([font.getbbox(line)[2] for line in lines]) + 2 * padding
-    height = sum([font.getbbox(line)[3] - font.getbbox(line)[1] for line in lines]) + 2 * padding + (len(lines)-1)*2*scale
+    height = sum([font.getbbox(line)[3] - font.getbbox(line)[1] for line in lines]) + 2 * padding + (len(lines)-1)*8
     img = Image.new("RGBA", (width, height), (255, 255, 255, 0))
     draw = ImageDraw.Draw(img)
     y = padding
     for line in lines:
         draw.text((padding, y), line, font=font, fill=color)
-        y += font.getbbox(line)[3] - font.getbbox(line)[1] + 2*scale
+        y += font.getbbox(line)[3] - font.getbbox(line)[1] + 8
     return img
 
 
