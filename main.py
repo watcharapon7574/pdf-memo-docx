@@ -182,8 +182,8 @@ def add_signature():
 @app.route('/add_signature_v2', methods=['POST'])
 def add_signature_v2():
     try:
-        DEFAULT_SIGNATURE_HEIGHT = 70
-        DEFAULT_COMMENT_FONT_SIZE = 20
+        DEFAULT_SIGNATURE_HEIGHT = 50
+        DEFAULT_COMMENT_FONT_SIZE = 16
         font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew.ttf")
         if not os.path.isfile(font_path):
             return jsonify({'error': f"Font file not found: {font_path}"}), 500
