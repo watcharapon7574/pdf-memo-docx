@@ -203,8 +203,10 @@ def add_signature_v2():
         draw = ImageDraw.Draw(img)
         y = padding
         for i, line in enumerate(lines):
-            _, h, bbox = line_sizes[i]
-            draw.text((padding, y - bbox[1]), line, font=font, fill=color)
+            w, h, bbox = line_sizes[i]
+            # คำนวณ offset_x เพื่อให้อยู่กึ่งกลางกล่อง image
+            offset_x = (max_width - w) // 2
+            draw.text((offset_x, y - bbox[1]), line, font=font, fill=color)
             y += h + 2*scale
         return img
     try:
@@ -258,8 +260,7 @@ def add_signature_v2():
                             img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1)
                             img_byte_arr = io.BytesIO()
                             img.save(img_byte_arr, format='PNG')
-                            center_x = (page.rect.width - img.width) / 2
-                            rect = fitz.Rect(center_x, current_y, center_x + img.width, current_y + img.height)
+                            rect = fitz.Rect(x, current_y, x + img.width, current_y + img.height)
                             page.insert_image(rect, stream=img_byte_arr.getvalue())
                             current_y += img.height
                         elif sig['type'] == 'image':
@@ -311,8 +312,7 @@ def add_signature_v2():
                                 img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1)
                                 img_byte_arr = io.BytesIO()
                                 img.save(img_byte_arr, format='PNG')
-                                center_x = (page.rect.width - img.width) / 2
-                                rect = fitz.Rect(center_x, current_y, center_x + img.width, current_y + img.height)
+                                rect = fitz.Rect(x, current_y, x + img.width, current_y + img.height)
                                 page.insert_image(rect, stream=img_byte_arr.getvalue())
                                 current_y += img.height
             else:
@@ -333,8 +333,7 @@ def add_signature_v2():
                         img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1)
                         img_byte_arr = io.BytesIO()
                         img.save(img_byte_arr, format='PNG')
-                        center_x = (page.rect.width - img.width) / 2
-                        rect = fitz.Rect(center_x, current_y, center_x + img.width, current_y + img.height)
+                        rect = fitz.Rect(x, current_y, x + img.width, current_y + img.height)
                         page.insert_image(rect, stream=img_byte_arr.getvalue())
                         current_y += img.height
                     elif sig['type'] == 'image':
