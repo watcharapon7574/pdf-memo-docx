@@ -178,146 +178,26 @@ def add_signature():
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
-# --- สร้าง PDF และวางลายเซ็นในขั้นตอนเดียว ---
-@app.route('/generate_signed_pdf', methods=['POST'])
-def generate_signed_pdf():
+
+@app.route('/add_signature_v2', methods=['POST'])
+def add_signature_v2():
     try:
-        # 1. Render Word → PDF
-        if 'template_data' not in request.form or 'signatures' not in request.form:
-            return jsonify({'error': 'template_data and signatures are required'}), 400
-        data = json.loads(request.form['template_data'])
-        # แปลงเลขใน dict เป็นเลขไทย
-        def convert_dict(d):
-            if isinstance(d, dict):
-                return {k: convert_dict(v) for k, v in d.items()}
-            elif isinstance(d, list):
-                return [convert_dict(i) for i in d]
-            elif isinstance(d, str):
-                return to_thai_digits(d)
-            else:
-                return d
-        data = convert_dict(data)
-        template_path = os.path.join(os.path.dirname(__file__), "templates", "memo-template2.docx")
-        if not os.path.exists(template_path):
-            return jsonify({'error': f'Template file not found: {template_path}'}), 500
-        doc = DocxTemplate(template_path)
-        doc.render(data)
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_docx:
-            doc.save(tmp_docx.name)
-            tmp_pdf_path = tmp_docx.name.replace('.docx', '.pdf')
-            convert_docx_to_pdf(tmp_docx.name, tmp_pdf_path)
-
-        pdf = fitz.open(tmp_pdf_path)
-
-        # 2. Add Signatures & Comments
-        signatures = json.loads(request.form['signatures'])
-        from collections import defaultdict
-        sig_dict = defaultdict(list)
-        for sig in signatures:
-            page_number = int(sig.get('page', 0))
-            x = int(sig['x'])
-            y = int(sig['y'])
-            sig_dict[(page_number, x, y)].append(sig)
-
-        DEFAULT_SIGNATURE_HEIGHT = 50
+        DEFAULT_SIGNATURE_HEIGHT = 70
         DEFAULT_COMMENT_FONT_SIZE = 20
-        font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew.ttf")
-
-        for (page_number, x, y), sigs in sig_dict.items():
-            page = pdf[page_number]
-            sigs_sorted = sorted(sigs, key=lambda s: 0 if s['type'] == 'text' else 1)
-            current_y = y
-            for sig in sigs_sorted:
-                if sig['type'] == 'text':
-                    text = to_thai_digits(sig.get('text', ''))
-                    font_size = DEFAULT_COMMENT_FONT_SIZE
-                    orig_color = sig.get('color', (2, 53, 139))
-                    if isinstance(orig_color, (list, tuple)):
-                        r = min(int(orig_color[0]*0.8), 255)
-                        g = min(int(orig_color[1]*0.8), 255)
-                        b = min(int(orig_color[2]*0.8), 255)
-                        color = (r, g, b)
-                    else:
-                        color = (2, 53, 139)
-                    img = draw_text_image(text, font_path, font_size=font_size, color=color, scale=4)
-                    img_byte_arr = io.BytesIO()
-                    img.save(img_byte_arr, format='PNG')
-                    img = Image.open(io.BytesIO(img_byte_arr.getvalue()))
-                    img = img.resize((round(img.width/4), round(img.height/4)), resample=Image.LANCZOS)
-                    rect = fitz.Rect(x, current_y, x + img.width, current_y + img.height)
-                    page.insert_image(rect, stream=img_byte_arr.getvalue())
-                    current_y += img.height
-                elif sig['type'] == 'image':
-                    file_key = sig['file_key']
-                    if file_key not in request.files:
-                        continue
-                    signature_file = request.files[file_key]
-                    img = Image.open(signature_file)
-                    fixed_height = DEFAULT_SIGNATURE_HEIGHT
-                    ratio = fixed_height / img.height
-                    new_width = int(img.width * ratio)
-                    img = img.resize((new_width, fixed_height), resample=Image.LANCZOS)
-                    img_byte_arr = io.BytesIO()
-                    img.save(img_byte_arr, format='PNG')
-                    rect = fitz.Rect(x, current_y, x + new_width, current_y + fixed_height)
-                    page.insert_image(rect, stream=img_byte_arr.getvalue())
-                    current_y += fixed_height
-
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_signed_pdf:
-            pdf.save(tmp_signed_pdf.name)
-        pdf.close()
-        return send_file(tmp_signed_pdf.name, mimetype="application/pdf", as_attachment=True)
-    except Exception as e:
-        print(traceback.format_exc())
-        return jsonify({'error': str(e)}), 500
-
-# --- สร้าง PDF จาก docx หรือใช้ PDF ที่อัพโหลด แล้ววางลายเซ็นและคอมเมนต์ในไฟล์เดียว ---
-@app.route('/pdf_with_signature', methods=['POST'])
-def pdf_with_signature():
-    try:
-        # Check signatures field
-        if 'signatures' not in request.form:
-            return jsonify({'error': 'signatures field is required'}), 400
-        signatures = json.loads(request.form['signatures'])
-
         font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew.ttf")
         if not os.path.isfile(font_path):
             return jsonify({'error': f"Font file not found: {font_path}"}), 500
 
-        # Determine if template_data or pdf file is provided
-        pdf = None
-        tmp_pdf_path = None
-        if 'pdf' in request.files:
-            # Use uploaded PDF file
-            pdf_file = request.files['pdf']
-            pdf_bytes = pdf_file.read()
-            pdf = fitz.open(stream=pdf_bytes, filetype="pdf")
-        else:
-            # Use template_data to generate PDF
-            data = {}
-            if 'template_data' in request.form:
-                data = json.loads(request.form['template_data'])
-            # แปลงเลขใน dict เป็นเลขไทย
-            def convert_dict(d):
-                if isinstance(d, dict):
-                    return {k: convert_dict(v) for k, v in d.items()}
-                elif isinstance(d, list):
-                    return [convert_dict(i) for i in d]
-                elif isinstance(d, str):
-                    return to_thai_digits(d)
-                else:
-                    return d
-            data = convert_dict(data)
-            template_path = os.path.join(os.path.dirname(__file__), "templates", "memo-template2.docx")
-            if not os.path.exists(template_path):
-                return jsonify({'error': f'Template file not found: {template_path}'}), 500
-            doc = DocxTemplate(template_path)
-            doc.render(data)
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_docx:
-                doc.save(tmp_docx.name)
-                tmp_pdf_path = tmp_docx.name.replace('.docx', '.pdf')
-                convert_docx_to_pdf(tmp_docx.name, tmp_pdf_path)
-            pdf = fitz.open(tmp_pdf_path)
+        if 'pdf' not in request.files:
+            return jsonify({'error': 'No PDF file uploaded'}), 400
+        pdf_file = request.files['pdf']
+
+        if 'signatures' not in request.form:
+            return jsonify({'error': 'No signatures data'}), 400
+        signatures = json.loads(request.form['signatures'])
+
+        pdf_bytes = pdf_file.read()
+        pdf = fitz.open(stream=pdf_bytes, filetype="pdf")
 
         from collections import defaultdict
         sig_dict = defaultdict(list)
@@ -327,63 +207,132 @@ def pdf_with_signature():
             y = int(sig['y'])
             sig_dict[(page_number, x, y)].append(sig)
 
-        DEFAULT_SIGNATURE_HEIGHT = 50
-        DEFAULT_COMMENT_FONT_SIZE = 20
-
         for (page_number, x, y), sigs in sig_dict.items():
-            if page_number >= len(pdf):
-                continue
             page = pdf[page_number]
-            sigs_sorted = sorted(sigs, key=lambda s: 0 if s['type'] == 'text' else 1)
             current_y = y
-            for sig in sigs_sorted:
-                if sig['type'] == 'text':
-                    text = to_thai_digits(sig.get('text', ''))
-                    font_size = DEFAULT_COMMENT_FONT_SIZE
-                    orig_color = sig.get('color', (2, 53, 139))
-                    if isinstance(orig_color, (list, tuple)):
-                        r = min(int(orig_color[0]*0.8), 255)
-                        g = min(int(orig_color[1]*0.8), 255)
-                        b = min(int(orig_color[2]*0.8), 255)
-                        color = (r, g, b)
+            # Check if any signature has 'lines' field
+            has_lines = any('lines' in sig for sig in sigs)
+            if has_lines:
+                # For each sig with lines, draw lines in order
+                for sig in sigs:
+                    lines = sig.get('lines')
+                    if not lines:
+                        # fallback to old logic for this sig
+                        if sig['type'] == 'text':
+                            text = to_thai_digits(sig.get('text', ''))
+                            font_size = DEFAULT_COMMENT_FONT_SIZE
+                            orig_color = sig.get('color', (2, 53, 139))
+                            if isinstance(orig_color, (list, tuple)):
+                                r = min(int(orig_color[0]*0.8), 255)
+                                g = min(int(orig_color[1]*0.8), 255)
+                                b = min(int(orig_color[2]*0.8), 255)
+                                color = (r, g, b)
+                            else:
+                                color = (2, 53, 139)
+                            img = draw_text_image(text, font_path, font_size=font_size, color=color, scale=1)
+                            img_byte_arr = io.BytesIO()
+                            img.save(img_byte_arr, format='PNG')
+                            rect = fitz.Rect(x, current_y, x + img.width, current_y + img.height)
+                            page.insert_image(rect, stream=img_byte_arr.getvalue())
+                            current_y += img.height
+                        elif sig['type'] == 'image':
+                            file_key = sig['file_key']
+                            if file_key not in request.files:
+                                continue
+                            signature_file = request.files[file_key]
+                            img = Image.open(signature_file)
+                            fixed_height = DEFAULT_SIGNATURE_HEIGHT
+                            ratio = fixed_height / img.height
+                            new_width = int(img.width * ratio)
+                            img = img.resize((new_width, fixed_height), resample=Image.LANCZOS)
+                            img_byte_arr = io.BytesIO()
+                            img.save(img_byte_arr, format='PNG')
+                            rect = fitz.Rect(x, current_y, x + new_width, current_y + fixed_height)
+                            page.insert_image(rect, stream=img_byte_arr.getvalue())
+                            current_y += fixed_height
                     else:
-                        color = (2, 53, 139)
-                    img = draw_text_image(text, font_path, font_size=font_size, color=color, scale=4)
-                    img_byte_arr = io.BytesIO()
-                    img.save(img_byte_arr, format='PNG')
-                    img = Image.open(io.BytesIO(img_byte_arr.getvalue()))
-                    img = img.resize((round(img.width/4), round(img.height/4)), resample=Image.LANCZOS)
-                    rect = fitz.Rect(x, current_y, x + img.width, current_y + img.height)
-                    page.insert_image(rect, stream=img_byte_arr.getvalue())
-                    current_y += img.height
-                elif sig['type'] == 'image':
-                    file_key = sig['file_key']
-                    if file_key not in request.files:
-                        continue
-                    signature_file = request.files[file_key]
-                    img = Image.open(signature_file)
-                    fixed_height = DEFAULT_SIGNATURE_HEIGHT
-                    ratio = fixed_height / img.height
-                    new_width = int(img.width * ratio)
-                    img = img.resize((new_width, fixed_height), resample=Image.LANCZOS)
-                    img_byte_arr = io.BytesIO()
-                    img.save(img_byte_arr, format='PNG')
-                    rect = fitz.Rect(x, current_y, x + new_width, current_y + fixed_height)
-                    page.insert_image(rect, stream=img_byte_arr.getvalue())
-                    current_y += fixed_height
+                        # draw lines in order
+                        for line in lines:
+                            line_type = line.get('type')
+                            if line_type == 'image':
+                                file_key = line.get('file_key')
+                                if file_key and file_key in request.files:
+                                    signature_file = request.files[file_key]
+                                    img = Image.open(signature_file)
+                                    fixed_height = DEFAULT_SIGNATURE_HEIGHT
+                                    ratio = fixed_height / img.height
+                                    new_width = int(img.width * ratio)
+                                    img = img.resize((new_width, fixed_height), resample=Image.LANCZOS)
+                                    img_byte_arr = io.BytesIO()
+                                    img.save(img_byte_arr, format='PNG')
+                                    rect = fitz.Rect(x, current_y, x + new_width, current_y + fixed_height)
+                                    page.insert_image(rect, stream=img_byte_arr.getvalue())
+                                    current_y += fixed_height
+                            else:
+                                # For text types: 'comment', 'name', 'position', 'academic_rank', 'org_structure_role', 'timestamp'
+                                text_value = line.get('text') or line.get('value') or line.get('comment') or ''
+                                text = to_thai_digits(text_value)
+                                font_size = DEFAULT_COMMENT_FONT_SIZE
+                                orig_color = line.get('color', (2, 53, 139))
+                                if isinstance(orig_color, (list, tuple)):
+                                    r = min(int(orig_color[0]*0.8), 255)
+                                    g = min(int(orig_color[1]*0.8), 255)
+                                    b = min(int(orig_color[2]*0.8), 255)
+                                    color = (r, g, b)
+                                else:
+                                    color = (2, 53, 139)
+                                img = draw_text_image(text, font_path, font_size=font_size, color=color, scale=1)
+                                img_byte_arr = io.BytesIO()
+                                img.save(img_byte_arr, format='PNG')
+                                rect = fitz.Rect(x, current_y, x + img.width, current_y + img.height)
+                                page.insert_image(rect, stream=img_byte_arr.getvalue())
+                                current_y += img.height
+            else:
+                # fallback to old logic
+                sigs_sorted = sorted(sigs, key=lambda s: 0 if s['type'] == 'text' else 1)
+                for sig in sigs_sorted:
+                    if sig['type'] == 'text':
+                        text = to_thai_digits(sig.get('text', ''))
+                        font_size = DEFAULT_COMMENT_FONT_SIZE
+                        orig_color = sig.get('color', (2, 53, 139))
+                        if isinstance(orig_color, (list, tuple)):
+                            r = min(int(orig_color[0]*0.8), 255)
+                            g = min(int(orig_color[1]*0.8), 255)
+                            b = min(int(orig_color[2]*0.8), 255)
+                            color = (r, g, b)
+                        else:
+                            color = (2, 53, 139)
+                        img = draw_text_image(text, font_path, font_size=font_size, color=color, scale=1)
+                        img_byte_arr = io.BytesIO()
+                        img.save(img_byte_arr, format='PNG')
+                        rect = fitz.Rect(x, current_y, x + img.width, current_y + img.height)
+                        page.insert_image(rect, stream=img_byte_arr.getvalue())
+                        current_y += img.height
+                    elif sig['type'] == 'image':
+                        file_key = sig['file_key']
+                        if file_key not in request.files:
+                            continue
+                        signature_file = request.files[file_key]
+                        img = Image.open(signature_file)
+                        fixed_height = DEFAULT_SIGNATURE_HEIGHT
+                        ratio = fixed_height / img.height
+                        new_width = int(img.width * ratio)
+                        img = img.resize((new_width, fixed_height), resample=Image.LANCZOS)
+                        img_byte_arr = io.BytesIO()
+                        img.save(img_byte_arr, format='PNG')
+                        rect = fitz.Rect(x, current_y, x + new_width, current_y + fixed_height)
+                        page.insert_image(rect, stream=img_byte_arr.getvalue())
+                        current_y += fixed_height
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_signed_pdf:
-            pdf.save(tmp_signed_pdf.name)
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_pdf:
+            pdf.save(tmp_pdf.name)
         pdf.close()
-        if tmp_pdf_path and os.path.exists(tmp_pdf_path):
-            try:
-                os.remove(tmp_pdf_path)
-            except:
-                pass
-        return send_file(tmp_signed_pdf.name, mimetype="application/pdf", as_attachment=True)
+        return send_file(tmp_pdf.name, mimetype="application/pdf", as_attachment=True, download_name="signed.pdf")
     except Exception as e:
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
+
+
 
 if __name__ == "__main__":
     # สำหรับ Railway ต้องฟังที่ 0.0.0.0
