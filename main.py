@@ -183,27 +183,29 @@ def add_signature():
 def add_signature_v2():
     # --- ฟังก์ชันวาดข้อความเป็นภาพ (v2) ---
     def draw_text_image_v2(text, font_path, font_size=20, color=(2, 53, 139), scale=1):
-        from PIL import ImageFont, ImageDraw
+        from PIL import ImageFont, ImageDraw, Image
         big_font_size = font_size * scale
         font = ImageFont.truetype(font_path, big_font_size)
-        padding = 4 * scale
+        padding = 10 * scale
         lines = text.split('\n')
-        # คำนวณขนาดแต่ละบรรทัดอย่างถูกต้อง
+        # ใช้ dummy image สำหรับวัด textbbox
+        dummy_img = Image.new("RGBA", (10, 10), (255, 255, 255, 0))
+        dummy_draw = ImageDraw.Draw(dummy_img)
         line_sizes = []
         for line in lines:
-            mask = font.getmask(line)
-            bbox = mask.getbbox() or (0, 0, 0, 0)
+            bbox = dummy_draw.textbbox((0, 0), line, font=font)
             width = bbox[2] - bbox[0]
             height = bbox[3] - bbox[1]
-            line_sizes.append((width, height))
-        max_width = max([w for w, h in line_sizes]) + 2 * padding
-        total_height = sum([h for w, h in line_sizes]) + 2 * padding + (len(lines)-1)*2*scale
+            line_sizes.append((width, height, bbox))
+        max_width = max([w for w, h, _ in line_sizes]) + 2 * padding
+        total_height = sum([h for w, h, _ in line_sizes]) + 2 * padding + (len(lines)-1)*2*scale
         img = Image.new("RGBA", (max_width, total_height), (255, 255, 255, 0))
         draw = ImageDraw.Draw(img)
         y = padding
         for i, line in enumerate(lines):
-            draw.text((padding, y), line, font=font, fill=color)
-            y += line_sizes[i][1] + 2*scale
+            _, h, bbox = line_sizes[i]
+            draw.text((padding, y - bbox[1]), line, font=font, fill=color)
+            y += h + 2*scale
         return img
     try:
         DEFAULT_SIGNATURE_HEIGHT = 50
