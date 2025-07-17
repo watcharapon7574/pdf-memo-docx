@@ -186,7 +186,7 @@ def add_signature_v2():
         from PIL import ImageFont, ImageDraw
         big_font_size = font_size * scale
         font = ImageFont.truetype(font_path, big_font_size)
-        padding = 12 * scale
+        padding = 4 * scale
         lines = text.split('\n')
         width = max([font.getbbox(line)[2] for line in lines]) + 2 * padding
         height = sum([font.getbbox(line)[3] - font.getbbox(line)[1] for line in lines]) + 2 * padding + (len(lines)-1)*2*scale
