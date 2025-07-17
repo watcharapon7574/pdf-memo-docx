@@ -188,14 +188,22 @@ def add_signature_v2():
         font = ImageFont.truetype(font_path, big_font_size)
         padding = 4 * scale
         lines = text.split('\n')
-        width = max([font.getbbox(line)[2] for line in lines]) + 2 * padding
-        height = sum([font.getbbox(line)[3] - font.getbbox(line)[1] for line in lines]) + 2 * padding + (len(lines)-1)*2*scale
-        img = Image.new("RGBA", (width, height), (255, 255, 255, 0))
+        # คำนวณขนาดแต่ละบรรทัดอย่างถูกต้อง
+        line_sizes = []
+        for line in lines:
+            mask = font.getmask(line)
+            bbox = mask.getbbox() or (0, 0, 0, 0)
+            width = bbox[2] - bbox[0]
+            height = bbox[3] - bbox[1]
+            line_sizes.append((width, height))
+        max_width = max([w for w, h in line_sizes]) + 2 * padding
+        total_height = sum([h for w, h in line_sizes]) + 2 * padding + (len(lines)-1)*2*scale
+        img = Image.new("RGBA", (max_width, total_height), (255, 255, 255, 0))
         draw = ImageDraw.Draw(img)
         y = padding
-        for line in lines:
+        for i, line in enumerate(lines):
             draw.text((padding, y), line, font=font, fill=color)
-            y += font.getbbox(line)[3] - font.getbbox(line)[1] + 2*scale
+            y += line_sizes[i][1] + 2*scale
         return img
     try:
         DEFAULT_SIGNATURE_HEIGHT = 50
