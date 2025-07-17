@@ -276,7 +276,8 @@ def add_signature_v2():
                             img = img.resize((new_width, fixed_height), resample=Image.LANCZOS)
                             img_byte_arr = io.BytesIO()
                             img.save(img_byte_arr, format='PNG')
-                            rect = fitz.Rect(x, current_y, x + new_width, current_y + fixed_height)
+                            left_x = x - new_width // 2
+                            rect = fitz.Rect(left_x, current_y, left_x + new_width, current_y + fixed_height)
                             page.insert_image(rect, stream=img_byte_arr.getvalue())
                             current_y += fixed_height
                     else:
@@ -294,7 +295,8 @@ def add_signature_v2():
                                     img = img.resize((new_width, fixed_height), resample=Image.LANCZOS)
                                     img_byte_arr = io.BytesIO()
                                     img.save(img_byte_arr, format='PNG')
-                                    rect = fitz.Rect(x, current_y, x + new_width, current_y + fixed_height)
+                                    left_x = x - new_width // 2
+                                    rect = fitz.Rect(left_x, current_y, left_x + new_width, current_y + fixed_height)
                                     page.insert_image(rect, stream=img_byte_arr.getvalue())
                                     current_y += fixed_height
                             else:
@@ -351,7 +353,8 @@ def add_signature_v2():
                         img = img.resize((new_width, fixed_height), resample=Image.LANCZOS)
                         img_byte_arr = io.BytesIO()
                         img.save(img_byte_arr, format='PNG')
-                        rect = fitz.Rect(x, current_y, x + new_width, current_y + fixed_height)
+                        left_x = x - new_width // 2
+                        rect = fitz.Rect(left_x, current_y, left_x + new_width, current_y + fixed_height)
                         page.insert_image(rect, stream=img_byte_arr.getvalue())
                         current_y += fixed_height
 
