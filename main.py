@@ -182,8 +182,11 @@ def add_signature():
 @app.route('/add_signature_v2', methods=['POST'])
 def add_signature_v2():
     # --- ฟังก์ชันวาดข้อความเป็นภาพ (v2) ---
-    def draw_text_image_v2(text, font_path, font_size=20, color=(2, 53, 139), scale=1):
+    def draw_text_image_v2(text, font_path, font_size=20, color=(2, 53, 139), scale=1, font_weight="regular"):
         from PIL import ImageFont, ImageDraw, Image
+        # เลือก font ตาม font_weight
+        if font_weight == "bold":
+            font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew Bold.ttf")
         big_font_size = font_size * scale
         font = ImageFont.truetype(font_path, big_font_size)
         padding = 4 * scale
@@ -248,7 +251,9 @@ def add_signature_v2():
                         # fallback to old logic for this sig
                         if sig['type'] == 'text':
                             text = to_thai_digits(sig.get('text', ''))
-                            font_size = DEFAULT_COMMENT_FONT_SIZE
+                            # ถ้า type == "comment" ให้ font_size=20, font_weight="bold"
+                            font_size = 20 if sig.get('type') == 'comment' else DEFAULT_COMMENT_FONT_SIZE
+                            font_weight = "bold" if sig.get('type') == 'comment' else "regular"
                             orig_color = sig.get('color', (2, 53, 139))
                             if isinstance(orig_color, (list, tuple)):
                                 r = min(int(orig_color[0]*0.8), 255)
@@ -257,7 +262,7 @@ def add_signature_v2():
                                 color = (r, g, b)
                             else:
                                 color = (2, 53, 139)
-                            img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1)
+                            img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1, font_weight=font_weight)
                             img_byte_arr = io.BytesIO()
                             img.save(img_byte_arr, format='PNG')
                             left_x = x - img.width // 2
@@ -303,7 +308,9 @@ def add_signature_v2():
                                 # For text types: 'comment', 'name', 'position', 'academic_rank', 'org_structure_role', 'timestamp'
                                 text_value = line.get('text') or line.get('value') or line.get('comment') or ''
                                 text = to_thai_digits(text_value)
-                                font_size = DEFAULT_COMMENT_FONT_SIZE
+                                # ถ้า type == "comment" ให้ font_size=20, font_weight="bold"
+                                font_size = 20 if line_type == 'comment' else DEFAULT_COMMENT_FONT_SIZE
+                                font_weight = "bold" if line_type == 'comment' else "regular"
                                 orig_color = line.get('color', (2, 53, 139))
                                 if isinstance(orig_color, (list, tuple)):
                                     r = min(int(orig_color[0]*0.8), 255)
@@ -312,7 +319,7 @@ def add_signature_v2():
                                     color = (r, g, b)
                                 else:
                                     color = (2, 53, 139)
-                                img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1)
+                                img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1, font_weight=font_weight)
                                 img_byte_arr = io.BytesIO()
                                 img.save(img_byte_arr, format='PNG')
                                 left_x = x - img.width // 2
@@ -325,7 +332,9 @@ def add_signature_v2():
                 for sig in sigs_sorted:
                     if sig['type'] == 'text':
                         text = to_thai_digits(sig.get('text', ''))
-                        font_size = DEFAULT_COMMENT_FONT_SIZE
+                        # ถ้า type == "comment" ให้ font_size=20, font_weight="bold"
+                        font_size = 20 if sig.get('type') == 'comment' else DEFAULT_COMMENT_FONT_SIZE
+                        font_weight = "bold" if sig.get('type') == 'comment' else "regular"
                         orig_color = sig.get('color', (2, 53, 139))
                         if isinstance(orig_color, (list, tuple)):
                             r = min(int(orig_color[0]*0.8), 255)
@@ -334,7 +343,7 @@ def add_signature_v2():
                             color = (r, g, b)
                         else:
                             color = (2, 53, 139)
-                        img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1)
+                        img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1, font_weight=font_weight)
                         img_byte_arr = io.BytesIO()
                         img.save(img_byte_arr, format='PNG')
                         left_x = x - img.width // 2
