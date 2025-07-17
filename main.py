@@ -260,7 +260,8 @@ def add_signature_v2():
                             img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1)
                             img_byte_arr = io.BytesIO()
                             img.save(img_byte_arr, format='PNG')
-                            rect = fitz.Rect(x, current_y, x + img.width, current_y + img.height)
+                            left_x = x - img.width // 2
+                            rect = fitz.Rect(left_x, current_y, left_x + img.width, current_y + img.height)
                             page.insert_image(rect, stream=img_byte_arr.getvalue())
                             current_y += img.height
                         elif sig['type'] == 'image':
@@ -312,7 +313,8 @@ def add_signature_v2():
                                 img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1)
                                 img_byte_arr = io.BytesIO()
                                 img.save(img_byte_arr, format='PNG')
-                                rect = fitz.Rect(x, current_y, x + img.width, current_y + img.height)
+                                left_x = x - img.width // 2
+                                rect = fitz.Rect(left_x, current_y, left_x + img.width, current_y + img.height)
                                 page.insert_image(rect, stream=img_byte_arr.getvalue())
                                 current_y += img.height
             else:
@@ -333,7 +335,8 @@ def add_signature_v2():
                         img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1)
                         img_byte_arr = io.BytesIO()
                         img.save(img_byte_arr, format='PNG')
-                        rect = fitz.Rect(x, current_y, x + img.width, current_y + img.height)
+                        left_x = x - img.width // 2
+                        rect = fitz.Rect(left_x, current_y, left_x + img.width, current_y + img.height)
                         page.insert_image(rect, stream=img_byte_arr.getvalue())
                         current_y += img.height
                     elif sig['type'] == 'image':
