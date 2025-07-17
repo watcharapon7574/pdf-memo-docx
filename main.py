@@ -10,6 +10,65 @@ import json
 import traceback
 from flask_cors import CORS
 
+# --- ฟังก์ชันสร้าง lines สำหรับลายเซ็น ---
+def make_lines(sig):
+    name = sig.get('signer', {}).get('name', '')
+    academic_rank = sig.get('signer', {}).get('academic_rank', '')
+    org_structure_role = sig.get('signer', {}).get('org_structure_role', '')
+    position = sig.get('signer', {}).get('position', '')
+    comment = sig.get('comment', '')
+    timestamp = sig.get('timestamp', '')
+    lines = []
+
+    # 1. ลายเซ็น+ชื่อ+academic_rank
+    if (not org_structure_role and academic_rank and not comment and not timestamp):
+        if name:
+            lines.append(name)
+        if academic_rank:
+            lines.append(academic_rank)
+        return lines
+
+    # 2. ลายเซ็น+ชื่อ+ตำแหน่ง+academic_rank+org_structure_role
+    if (org_structure_role and academic_rank and not comment and not timestamp):
+        if name:
+            lines.append(name)
+        if academic_rank:
+            lines.append("ตำแหน่ง " + academic_rank)
+        if org_structure_role:
+            lines.append("ปฏิบัติหน้าที่ " + org_structure_role)
+        return lines
+
+    # 3. ความเห็น+ลายเซ็น+ชื่อ+ตำแหน่งorg_structure_role+timestamp
+    if (comment and org_structure_role and timestamp):
+        lines.append(comment)
+        if name:
+            lines.append(name)
+        if org_structure_role:
+            lines.append("ตำแหน่ง " + org_structure_role)
+        if timestamp:
+            lines.append(timestamp)
+        return lines
+
+    # 4. ความเห็น+ลายเซ็น+ชื่อ+ตำแหน่งorg_structure_role
+    if (comment and org_structure_role):
+        lines.append(comment)
+        if name:
+            lines.append(name)
+        if org_structure_role:
+            lines.append("ตำแหน่ง " + org_structure_role)
+        return lines
+
+    # fallback
+    if name:
+        lines.append(name)
+    if academic_rank:
+        lines.append(academic_rank)
+    if org_structure_role:
+        lines.append("ตำแหน่ง " + org_structure_role)
+    if timestamp:
+        lines.append(timestamp)
+    return lines
+
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 # --- ฟังก์ชันแปลง docx → pdf ด้วย LibreOffice ---
