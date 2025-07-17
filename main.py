@@ -186,7 +186,7 @@ def add_signature_v2():
         from PIL import ImageFont, ImageDraw, Image
         big_font_size = font_size * scale
         font = ImageFont.truetype(font_path, big_font_size)
-        padding = 10 * scale
+        padding = 4 * scale
         lines = text.split('\n')
         # ใช้ dummy image สำหรับวัด textbbox
         dummy_img = Image.new("RGBA", (10, 10), (255, 255, 255, 0))
