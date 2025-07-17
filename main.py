@@ -181,9 +181,25 @@ def add_signature():
 
 @app.route('/add_signature_v2', methods=['POST'])
 def add_signature_v2():
+    # --- ฟังก์ชันวาดข้อความเป็นภาพ (v2) ---
+    def draw_text_image_v2(text, font_path, font_size=20, color=(2, 53, 139), scale=1):
+        from PIL import ImageFont, ImageDraw
+        big_font_size = font_size * scale
+        font = ImageFont.truetype(font_path, big_font_size)
+        padding = 12 * scale
+        lines = text.split('\n')
+        width = max([font.getbbox(line)[2] for line in lines]) + 2 * padding
+        height = sum([font.getbbox(line)[3] - font.getbbox(line)[1] for line in lines]) + 2 * padding + (len(lines)-1)*2*scale
+        img = Image.new("RGBA", (width, height), (255, 255, 255, 0))
+        draw = ImageDraw.Draw(img)
+        y = padding
+        for line in lines:
+            draw.text((padding, y), line, font=font, fill=color)
+            y += font.getbbox(line)[3] - font.getbbox(line)[1] + 2*scale
+        return img
     try:
         DEFAULT_SIGNATURE_HEIGHT = 50
-        DEFAULT_COMMENT_FONT_SIZE = 16
+        DEFAULT_COMMENT_FONT_SIZE = 18
         font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew.ttf")
         if not os.path.isfile(font_path):
             return jsonify({'error': f"Font file not found: {font_path}"}), 500
@@ -229,7 +245,7 @@ def add_signature_v2():
                                 color = (r, g, b)
                             else:
                                 color = (2, 53, 139)
-                            img = draw_text_image(text, font_path, font_size=font_size, color=color, scale=1)
+                            img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1)
                             img_byte_arr = io.BytesIO()
                             img.save(img_byte_arr, format='PNG')
                             rect = fitz.Rect(x, current_y, x + img.width, current_y + img.height)
@@ -281,7 +297,7 @@ def add_signature_v2():
                                     color = (r, g, b)
                                 else:
                                     color = (2, 53, 139)
-                                img = draw_text_image(text, font_path, font_size=font_size, color=color, scale=1)
+                                img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1)
                                 img_byte_arr = io.BytesIO()
                                 img.save(img_byte_arr, format='PNG')
                                 rect = fitz.Rect(x, current_y, x + img.width, current_y + img.height)
@@ -302,7 +318,7 @@ def add_signature_v2():
                             color = (r, g, b)
                         else:
                             color = (2, 53, 139)
-                        img = draw_text_image(text, font_path, font_size=font_size, color=color, scale=1)
+                        img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1)
                         img_byte_arr = io.BytesIO()
                         img.save(img_byte_arr, format='PNG')
                         rect = fitz.Rect(x, current_y, x + img.width, current_y + img.height)
