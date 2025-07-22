@@ -60,7 +60,6 @@ def generate_pdf():
 
         # ===== เพิ่มส่วนนี้ =====
         required_fields = [
-            "doc_number",
             "date",
             "subject",
             "attachment_title",
@@ -75,6 +74,14 @@ def generate_pdf():
         if missing:
             return jsonify({'error': f"Missing fields: {', '.join(missing)}"}), 400
         # =====================
+
+        # จัดรูปแบบ proposal ให้มี indent สำหรับเครื่องหมาย -
+        if 'proposal' in data and data['proposal']:
+            # แทนที่ - ด้วย newline + 10 spaces + -
+            data['proposal'] = data['proposal'].replace(' - ', '\n          - ')
+            # กรณีที่ขึ้นต้นด้วย -
+            if data['proposal'].startswith('- '):
+                data['proposal'] = '          ' + data['proposal']
 
         # แปลงเลขใน dict เป็นเลขไทย
         def convert_dict(d):
