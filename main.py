@@ -77,11 +77,16 @@ def generate_pdf():
 
         # จัดรูปแบบ proposal ให้มี indent สำหรับเครื่องหมาย -
         if 'proposal' in data and data['proposal']:
-            # แทนที่ - ด้วย newline + 10 spaces + -
-            data['proposal'] = data['proposal'].replace(' - ', '\n          - ')
+            import re
+            # แทนที่ - ทุกแบบ (ทั้งมีช่องว่างและไม่มี) ด้วย newline + 10 spaces + -
+            # ใช้ regex เพื่อจับ - ที่อยู่ตรงกลางประโยค
+            proposal_text = data['proposal']
+            # แทนที่ - ที่ไม่ใช่ตัวแรกของประโยค
+            proposal_text = re.sub(r'(?<!^)(?<!^\s*)-\s*', '\n          - ', proposal_text)
             # กรณีที่ขึ้นต้นด้วย -
-            if data['proposal'].startswith('- '):
-                data['proposal'] = '          ' + data['proposal']
+            if proposal_text.startswith('- '):
+                proposal_text = '          ' + proposal_text
+            data['proposal'] = proposal_text
 
         # แปลงเลขใน dict เป็นเลขไทย
         def convert_dict(d):
