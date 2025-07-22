@@ -62,7 +62,6 @@ def generate_pdf():
         required_fields = [
             "date",
             "subject",
-            "attachment_title",
             "introduction",
             "author_name",
             "author_position",
