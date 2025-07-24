@@ -278,23 +278,34 @@ def add_signature_v2():
             # Debug: แสดงข้อมูล page และพิกัด
             page_rect = page.rect
             print(f"DEBUG: Page {page_number} - Size: {page_rect.width}x{page_rect.height}")
-            print(f"DEBUG: Signature coordinates: ({x}, {y})")
+            print(f"DEBUG: Original coordinates: ({x}, {y})")
             print(f"DEBUG: Signature dimensions: {width}x{height}")
             print(f"DEBUG: Page bounds: x(0-{page_rect.width}), y(0-{page_rect.height})")
             
             # ถ้ามี width/height แสดงว่าเป็น center positioning
             is_center_positioning = width > 0 and height > 0
-            if is_center_positioning:
-                print(f"DEBUG: Using center positioning - adjusting coordinates")
-                # แปลงจาก center เป็น top-left สำหรับการวาง
-                center_x = x
-                center_y = y
-            else:
-                center_x = x
-                center_y = y
-                print(f"DEBUG: Using top-left positioning")
             
-            current_y = y
+            # Logic สำหรับปรับพิกัด Y ให้กลับกัน (บนเป็นล่าง ล่างเป็นบน)
+            # คำนวณ: new_y = (page_height - original_y - signature_height)
+            if is_center_positioning:
+                # สำหรับ center positioning ใช้ height ที่กำหนดมา
+                adjusted_y = page_rect.height - y - height
+                print(f"DEBUG: Y-axis flip with center positioning: {y} -> {adjusted_y}")
+                center_x = x
+                center_y = adjusted_y
+                print(f"DEBUG: Using center positioning - adjusted coordinates")
+                print(f"DEBUG: Center point: ({center_x}, {center_y})")
+                print(f"DEBUG: Bounding box: {width}x{height}")
+            else:
+                # สำหรับ top-left positioning ใช้ default signature height
+                signature_box_height = 60  # default height สำหรับการคำนวณ
+                adjusted_y = page_rect.height - y - signature_box_height
+                print(f"DEBUG: Y-axis flip with top-left positioning: {y} -> {adjusted_y}")
+                center_x = x
+                center_y = adjusted_y
+                print(f"DEBUG: Using top-left positioning - adjusted coordinates")
+            
+            current_y = center_y  # ใช้ค่า Y ที่ปรับแล้ว
             # Check if any signature has 'lines' field
             has_lines = any('lines' in sig for sig in sigs)
             if has_lines:
@@ -376,13 +387,16 @@ def add_signature_v2():
                                     img.save(img_byte_arr, format='PNG')
                                     
                                     if is_center_positioning:
-                                        left_x = center_x - new_width // 2
+                                        left_x = center_x - new_width // 2  # คืนค่าเดิม แต่เพิ่ม debug
                                         top_y = current_y
+                                        print(f"DEBUG: Image center positioning - center_x:{center_x}, new_width:{new_width}, left_x:{left_x}")
+                                        print(f"DEBUG: Expected position - should place image at left edge: {left_x}")
                                     else:
                                         left_x = x
                                         top_y = current_y
                                     
                                     rect = fitz.Rect(left_x, top_y, left_x + new_width, top_y + fixed_height)
+                                    print(f"DEBUG: Image rect: {rect}")
                                     page.insert_image(rect, stream=img_byte_arr.getvalue())
                                     current_y += fixed_height
                             else:
@@ -405,13 +419,16 @@ def add_signature_v2():
                                 img.save(img_byte_arr, format='PNG')
                                 
                                 if is_center_positioning:
-                                    left_x = center_x - img.width // 2
+                                    left_x = center_x - img.width // 2  # คืนค่าเดิม
                                     top_y = current_y
+                                    print(f"DEBUG: Text center positioning - center_x:{center_x}, img.width:{img.width}, left_x:{left_x}")
+                                    print(f"DEBUG: Expected position - should place text at left edge: {left_x}")
                                 else:
                                     left_x = x
                                     top_y = current_y
                                 
                                 rect = fitz.Rect(left_x, top_y, left_x + img.width, top_y + img.height)
+                                print(f"DEBUG: Text '{text}' rect: {rect}")
                                 page.insert_image(rect, stream=img_byte_arr.getvalue())
                                 current_y += img.height
             else:
