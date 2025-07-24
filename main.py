@@ -271,6 +271,13 @@ def add_signature_v2():
 
         for (page_number, x, y), sigs in sig_dict.items():
             page = pdf[page_number]
+            
+            # Debug: แสดงข้อมูล page และพิกัด
+            page_rect = page.rect
+            print(f"DEBUG: Page {page_number} - Size: {page_rect.width}x{page_rect.height}")
+            print(f"DEBUG: Signature coordinates: ({x}, {y})")
+            print(f"DEBUG: Page bounds: x(0-{page_rect.width}), y(0-{page_rect.height})")
+            
             current_y = y
             # Check if any signature has 'lines' field
             has_lines = any('lines' in sig for sig in sigs)
@@ -297,6 +304,7 @@ def add_signature_v2():
                             img_byte_arr = io.BytesIO()
                             img.save(img_byte_arr, format='PNG')
                             rect = fitz.Rect(x, current_y, x + img.width, current_y + img.height)
+                            print(f"DEBUG: Text '{text}' placed at rect: {rect}")
                             page.insert_image(rect, stream=img_byte_arr.getvalue())
                             current_y += img.height
                         elif sig['type'] == 'image':
@@ -312,6 +320,7 @@ def add_signature_v2():
                             img_byte_arr = io.BytesIO()
                             img.save(img_byte_arr, format='PNG')
                             rect = fitz.Rect(x, current_y, x + new_width, current_y + fixed_height)
+                            print(f"DEBUG: Image placed at rect: {rect}")
                             page.insert_image(rect, stream=img_byte_arr.getvalue())
                             current_y += fixed_height
                     else:
