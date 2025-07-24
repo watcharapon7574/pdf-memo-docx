@@ -297,7 +297,7 @@ def add_signature_v2():
                             img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1, font_weight=font_weight)
                             img_byte_arr = io.BytesIO()
                             img.save(img_byte_arr, format='PNG')
-                            left_x = x - img.width // 2
+                            left_x = x  # ใช้พิกัดโดยตรงจาก Frontend
                             rect = fitz.Rect(left_x, current_y, left_x + img.width, current_y + img.height)
                             page.insert_image(rect, stream=img_byte_arr.getvalue())
                             current_y += img.height
@@ -313,7 +313,7 @@ def add_signature_v2():
                             img = img.resize((new_width, fixed_height), resample=Image.LANCZOS)
                             img_byte_arr = io.BytesIO()
                             img.save(img_byte_arr, format='PNG')
-                            left_x = x - new_width // 2
+                            left_x = x  # ใช้พิกัดโดยตรงจาก Frontend
                             rect = fitz.Rect(left_x, current_y, left_x + new_width, current_y + fixed_height)
                             page.insert_image(rect, stream=img_byte_arr.getvalue())
                             current_y += fixed_height
@@ -332,7 +332,7 @@ def add_signature_v2():
                                     img = img.resize((new_width, fixed_height), resample=Image.LANCZOS)
                                     img_byte_arr = io.BytesIO()
                                     img.save(img_byte_arr, format='PNG')
-                                    left_x = x - new_width // 2
+                                    left_x = x  # ใช้พิกัดโดยตรงจาก Frontend
                                     rect = fitz.Rect(left_x, current_y, left_x + new_width, current_y + fixed_height)
                                     page.insert_image(rect, stream=img_byte_arr.getvalue())
                                     current_y += fixed_height
@@ -354,7 +354,7 @@ def add_signature_v2():
                                 img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1, font_weight=font_weight)
                                 img_byte_arr = io.BytesIO()
                                 img.save(img_byte_arr, format='PNG')
-                                left_x = x - img.width // 2
+                                left_x = x  # ใช้พิกัดโดยตรงจาก Frontend
                                 rect = fitz.Rect(left_x, current_y, left_x + img.width, current_y + img.height)
                                 page.insert_image(rect, stream=img_byte_arr.getvalue())
                                 current_y += img.height
@@ -378,7 +378,7 @@ def add_signature_v2():
                         img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1, font_weight=font_weight)
                         img_byte_arr = io.BytesIO()
                         img.save(img_byte_arr, format='PNG')
-                        left_x = x - img.width // 2
+                        left_x = x  # ใช้พิกัดโดยตรงจาก Frontend
                         rect = fitz.Rect(left_x, current_y, left_x + img.width, current_y + img.height)
                         page.insert_image(rect, stream=img_byte_arr.getvalue())
                         current_y += img.height
@@ -394,7 +394,7 @@ def add_signature_v2():
                         img = img.resize((new_width, fixed_height), resample=Image.LANCZOS)
                         img_byte_arr = io.BytesIO()
                         img.save(img_byte_arr, format='PNG')
-                        left_x = x - new_width // 2
+                        left_x = x  # ใช้พิกัดโดยตรงจาก Frontend
                         rect = fitz.Rect(left_x, current_y, left_x + new_width, current_y + fixed_height)
                         page.insert_image(rect, stream=img_byte_arr.getvalue())
                         current_y += fixed_height
