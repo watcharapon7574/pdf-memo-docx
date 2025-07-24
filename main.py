@@ -267,16 +267,32 @@ def add_signature_v2():
             page_number = int(sig.get('page', 0))
             x = int(sig['x'])
             y = int(sig['y'])
-            sig_dict[(page_number, x, y)].append(sig)
+            # รองรับ width/height สำหรับ center positioning
+            width = sig.get('width', 0)
+            height = sig.get('height', 0)
+            sig_dict[(page_number, x, y, width, height)].append(sig)
 
-        for (page_number, x, y), sigs in sig_dict.items():
+        for (page_number, x, y, width, height), sigs in sig_dict.items():
             page = pdf[page_number]
             
             # Debug: แสดงข้อมูล page และพิกัด
             page_rect = page.rect
             print(f"DEBUG: Page {page_number} - Size: {page_rect.width}x{page_rect.height}")
             print(f"DEBUG: Signature coordinates: ({x}, {y})")
+            print(f"DEBUG: Signature dimensions: {width}x{height}")
             print(f"DEBUG: Page bounds: x(0-{page_rect.width}), y(0-{page_rect.height})")
+            
+            # ถ้ามี width/height แสดงว่าเป็น center positioning
+            is_center_positioning = width > 0 and height > 0
+            if is_center_positioning:
+                print(f"DEBUG: Using center positioning - adjusting coordinates")
+                # แปลงจาก center เป็น top-left สำหรับการวาง
+                center_x = x
+                center_y = y
+            else:
+                center_x = x
+                center_y = y
+                print(f"DEBUG: Using top-left positioning")
             
             current_y = y
             # Check if any signature has 'lines' field
@@ -303,10 +319,18 @@ def add_signature_v2():
                             img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1, font_weight=font_weight)
                             img_byte_arr = io.BytesIO()
                             img.save(img_byte_arr, format='PNG')
-                            rect = fitz.Rect(x, current_y, x + img.width, current_y + img.height)
-                            print(f"DEBUG: Text '{text}' placed at rect: {rect}")
+                            # ใช้ center positioning ถ้ามี width/height
+                            if is_center_positioning:
+                                left_x = center_x - img.width // 2
+                                top_y = center_y - img.height // 2
+                            else:
+                                left_x = x
+                                top_y = current_y
+                            rect = fitz.Rect(left_x, top_y, left_x + img.width, top_y + img.height)
+                            print(f"DEBUG: Text '{text}' placed at rect: {rect} (center_pos: {is_center_positioning})")
                             page.insert_image(rect, stream=img_byte_arr.getvalue())
-                            current_y += img.height
+                            if not is_center_positioning:
+                                current_y += img.height
                         elif sig['type'] == 'image':
                             file_key = sig['file_key']
                             if file_key not in request.files:
@@ -319,12 +343,24 @@ def add_signature_v2():
                             img = img.resize((new_width, fixed_height), resample=Image.LANCZOS)
                             img_byte_arr = io.BytesIO()
                             img.save(img_byte_arr, format='PNG')
-                            rect = fitz.Rect(x, current_y, x + new_width, current_y + fixed_height)
-                            print(f"DEBUG: Image placed at rect: {rect}")
+                            # ใช้ center positioning ถ้ามี width/height
+                            if is_center_positioning:
+                                left_x = center_x - new_width // 2
+                                top_y = center_y - fixed_height // 2
+                            else:
+                                left_x = x
+                                top_y = current_y
+                            rect = fitz.Rect(left_x, top_y, left_x + new_width, top_y + fixed_height)
+                            print(f"DEBUG: Image placed at rect: {rect} (center_pos: {is_center_positioning})")
                             page.insert_image(rect, stream=img_byte_arr.getvalue())
-                            current_y += fixed_height
+                            if not is_center_positioning:
+                                current_y += fixed_height
                     else:
-                        # draw lines in order
+                        # draw lines in order - รองรับ center positioning
+                        if is_center_positioning:
+                            # สำหรับ center positioning ให้เริ่มจากด้านบนของ bounding box
+                            current_y = center_y - height // 2
+                        
                         for line in lines:
                             line_type = line.get('type')
                             if line_type == 'image':
@@ -338,7 +374,15 @@ def add_signature_v2():
                                     img = img.resize((new_width, fixed_height), resample=Image.LANCZOS)
                                     img_byte_arr = io.BytesIO()
                                     img.save(img_byte_arr, format='PNG')
-                                    rect = fitz.Rect(x, current_y, x + new_width, current_y + fixed_height)
+                                    
+                                    if is_center_positioning:
+                                        left_x = center_x - new_width // 2
+                                        top_y = current_y
+                                    else:
+                                        left_x = x
+                                        top_y = current_y
+                                    
+                                    rect = fitz.Rect(left_x, top_y, left_x + new_width, top_y + fixed_height)
                                     page.insert_image(rect, stream=img_byte_arr.getvalue())
                                     current_y += fixed_height
                             else:
@@ -359,7 +403,15 @@ def add_signature_v2():
                                 img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1, font_weight=font_weight)
                                 img_byte_arr = io.BytesIO()
                                 img.save(img_byte_arr, format='PNG')
-                                rect = fitz.Rect(x, current_y, x + img.width, current_y + img.height)
+                                
+                                if is_center_positioning:
+                                    left_x = center_x - img.width // 2
+                                    top_y = current_y
+                                else:
+                                    left_x = x
+                                    top_y = current_y
+                                
+                                rect = fitz.Rect(left_x, top_y, left_x + img.width, top_y + img.height)
                                 page.insert_image(rect, stream=img_byte_arr.getvalue())
                                 current_y += img.height
             else:
