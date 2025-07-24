@@ -286,11 +286,13 @@ def add_signature_v2():
             is_center_positioning = width > 0 and height > 0
             
             # Logic สำหรับปรับพิกัด Y ให้กลับกัน (บนเป็นล่าง ล่างเป็นบน)
-            # คำนวณ: new_y = (page_height - original_y - signature_height)
+            # คำนวณ: new_y = (page_height - original_y - signature_height) + height_offset
             if is_center_positioning:
                 # สำหรับ center positioning ใช้ height ที่กำหนดมา
                 adjusted_y = page_rect.height - y - height
-                print(f"DEBUG: Y-axis flip with center positioning: {y} -> {adjusted_y}")
+                # เลื่อนลงแนวดิ่งเท่ากับ height (60)
+                adjusted_y += height
+                print(f"DEBUG: Y-axis flip with center positioning: {y} -> {adjusted_y} (with +{height} offset)")
                 center_x = x
                 center_y = adjusted_y
                 print(f"DEBUG: Using center positioning - adjusted coordinates")
@@ -300,7 +302,9 @@ def add_signature_v2():
                 # สำหรับ top-left positioning ใช้ default signature height
                 signature_box_height = 60  # default height สำหรับการคำนวณ
                 adjusted_y = page_rect.height - y - signature_box_height
-                print(f"DEBUG: Y-axis flip with top-left positioning: {y} -> {adjusted_y}")
+                # เลื่อนลงแนวดิ่งเท่ากับ 60
+                adjusted_y += 60
+                print(f"DEBUG: Y-axis flip with top-left positioning: {y} -> {adjusted_y} (with +60 offset)")
                 center_x = x
                 center_y = adjusted_y
                 print(f"DEBUG: Using top-left positioning - adjusted coordinates")
