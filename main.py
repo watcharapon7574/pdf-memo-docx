@@ -430,6 +430,7 @@ def generate_2in1_memo():
 
         # ===== ส่วนที่ 1: สร้าง PDF (จาก /pdf) =====
         required_fields = [
+            "doc_number",
             "date",
             "subject",
             "introduction", 
@@ -723,6 +724,54 @@ def generate_2in1_memo():
         os.unlink(tmp_pdf)
         
         return send_file(final_pdf_file.name, mimetype="application/pdf", as_attachment=True, download_name="signed_memo.pdf")
+        
+    except Exception as e:
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/PDFmerge', methods=['POST'])
+def merge_pdfs():
+    """รวมไฟล์ PDF 2 ไฟล์เป็นไฟล์เดียว"""
+    try:
+        # ตรวจสอบไฟล์ที่ส่งมา
+        if 'pdf1' not in request.files:
+            return jsonify({'error': 'No pdf1 file uploaded'}), 400
+        if 'pdf2' not in request.files:
+            return jsonify({'error': 'No pdf2 file uploaded'}), 400
+        
+        pdf1_file = request.files['pdf1']
+        pdf2_file = request.files['pdf2']
+        
+        # อ่านไฟล์ PDF เป็น bytes (blob)
+        pdf1_bytes = pdf1_file.read()
+        pdf2_bytes = pdf2_file.read()
+        
+        # เปิดไฟล์ PDF จาก bytes
+        pdf1 = fitz.open(stream=pdf1_bytes, filetype="pdf")
+        pdf2 = fitz.open(stream=pdf2_bytes, filetype="pdf")
+        
+        # สร้าง PDF ใหม่สำหรับรวมไฟล์
+        merged_pdf = fitz.open()
+        
+        # เพิ่มหน้าจาก PDF แรก
+        merged_pdf.insert_pdf(pdf1)
+        
+        # เพิ่มหน้าจาก PDF ที่สอง
+        merged_pdf.insert_pdf(pdf2)
+        
+        # ปิดไฟล์ต้นฉบับ
+        pdf1.close()
+        pdf2.close()
+        
+        # บันทึกไฟล์ที่รวมแล้ว
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as merged_file:
+            merged_pdf.save(merged_file.name)
+        
+        merged_pdf.close()
+        
+        # ส่งไฟล์กลับ
+        return send_file(merged_file.name, mimetype="application/pdf", as_attachment=True, download_name="merged.pdf")
         
     except Exception as e:
         print(traceback.format_exc())
