@@ -270,6 +270,13 @@ def add_signature_v2():
             # รองรับ width/height สำหรับ center positioning
             width = sig.get('width', 0)
             height = sig.get('height', 0)
+            
+            # ถ้าไม่มี width/height ให้ใช้ค่า default สำหรับ center positioning
+            if width == 0 and height == 0:
+                width = 120  # default width
+                height = 60  # default height
+                print(f"DEBUG: Using default dimensions {width}x{height} for signature at ({x}, {y})")
+            
             sig_dict[(page_number, x, y, width, height)].append(sig)
 
         for (page_number, x, y, width, height), sigs in sig_dict.items():
@@ -291,7 +298,7 @@ def add_signature_v2():
                 # สำหรับ center positioning ใช้ height ที่กำหนดมา
                 adjusted_y = page_rect.height - y - height
                 # เลื่อนลงแนวดิ่งเท่ากับ height (60)
-                adjusted_y += height
+                adjusted_y += height+30
                 print(f"DEBUG: Y-axis flip with center positioning: {y} -> {adjusted_y} (with +{height} offset)")
                 center_x = x
                 center_y = adjusted_y
