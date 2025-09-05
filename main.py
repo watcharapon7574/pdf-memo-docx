@@ -859,6 +859,120 @@ def merge_pdfs():
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
+@app.route('/receive_num', methods=['POST'])
+def receive_num():
+    """
+    multipart/form-data:
+      - pdf: ไฟล์ PDF
+      - payload: JSON string:
+        {
+          "page": 0,
+          "x": 980, "y": 2060, "width": 1050, "height": 560,  # กึ่งกลาง+กรอบของตรา
+          "color": [2,53,139],
+          "register_no": "2567/506",
+          "date": "20 ก.ย. 67",
+          "time": "10.30 น.",
+          "receiver": "ดวงดี"
+        }
+    """
+    try:
+        if 'pdf' not in request.files:
+            return jsonify({'error': 'No PDF file uploaded'}), 400
+        if 'payload' not in request.form:
+            return jsonify({'error': 'No payload'}), 400
+
+        p = json.loads(request.form['payload'])
+        page_no = int(p.get('page', 0))
+        cx, cy = int(p['x']), int(p['y'])
+        bw, bh = int(p['width']), int(p['height'])
+        color = tuple(p.get('color', [2,53,139]))
+
+        # เปิด PDF
+        pdf_bytes = request.files['pdf'].read()
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        if page_no >= len(doc):
+            return jsonify({'error': 'Page out of range'}), 400
+        page = doc[page_no]
+
+        # ฟอนต์
+        font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew.ttf")
+        bold_font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew Bold.ttf")
+        if not os.path.isfile(font_path) or not os.path.isfile(bold_font_path):
+            return jsonify({'error': 'THSarabunNew fonts not found'}), 500
+
+        # วาดข้อความเป็นภาพ (จัดกลางแนวนอนในกรอบ)
+        def draw_text_img(text, size=18, bold=False):
+            from PIL import ImageFont, ImageDraw, Image
+            fp = bold_font_path if bold else font_path
+            font = ImageFont.truetype(fp, size)
+            lines = to_thai_digits(text).split('\n')
+            pad = 4
+            # วัด
+            tmp = Image.new("RGBA", (10,10), (255,255,255,0))
+            drw = ImageDraw.Draw(tmp)
+            w = max(drw.textbbox((0,0), ln, font=font)[2] for ln in lines) + pad*2
+            h = sum(drw.textbbox((0,0), ln, font=font)[3] for ln in lines) + pad*2 + (len(lines)-1)*2
+            img = Image.new("RGBA", (w,h), (255,255,255,0))
+            d = ImageDraw.Draw(img)
+            y = pad
+            for ln in lines:
+                bb = d.textbbox((0,0), ln, font=font)
+                lw = bb[2]-bb[0]; lh = bb[3]-bb[1]
+                d.text(((w-lw)//2, y-bb[1]), ln, font=font, fill=tuple(color))
+                y += lh + 2
+            return img
+
+        # helper แปะภาพลงหน้าแบบ center positioning
+        def paste_center(img, center_x, center_y):
+            left = center_x - img.width//2
+            top  = center_y - img.height//2
+            rect = fitz.Rect(left, top, left+img.width, top+img.height)
+            bio = io.BytesIO(); img.save(bio, format='PNG')
+            page.insert_image(rect, stream=bio.getvalue())
+
+        # คำนวณแกน Y: รับพิกัดจากบนซ้าย (สไตล์พิกัดภาพสแกน)
+        page_h = page.rect.height
+        # เอากึ่งกลางจริงของกรอบในพิกัด PDF
+        center_y = page_h - cy  # flip อย่างเดียวพอ
+
+        # เส้นหัวข้อกรอบตรา 4 บรรทัด (หนา)
+        header_lines = [
+            "ศูนย์การศึกษาพิเศษ เขตการศึกษา ๖ จ.ลพบุรี",
+            "เลขทะเบียนรับที่ ..........",
+            "วันที่ ........../............/............ เวลา ..........น.",
+            "ผู้รับ ........................"
+        ]
+        gap = int(bh/4)  # ระยะห่างแต่ละบรรทัดในกรอบ
+
+        start_y = center_y - ( (len(header_lines)-1) * gap // 2 )
+        for i, text in enumerate(header_lines):
+            img = draw_text_img(text, size=20, bold=True)
+            paste_center(img, cx, start_y + i*gap)
+
+        # ค่าที่ผู้ใช้กรอก จะถูกแปะทับในตำแหน่งเคาะช่อง
+        # ปรับ offset ให้ตรงกับภาพตัวอย่าง
+        reg_img = draw_text_img(p.get('register_no',''), size=20, bold=True)
+        paste_center(reg_img, cx + int(bw*0.30), start_y + 1*gap)
+
+        date_img = draw_text_img(p.get('date',''), size=18)
+        paste_center(date_img, cx - int(bw*0.31), start_y + 2*gap)
+
+        time_img = draw_text_img(p.get('time',''), size=18)
+        paste_center(time_img, cx + int(bw*0.32), start_y + 2*gap)
+
+        recv_img = draw_text_img(p.get('receiver',''), size=18)
+        paste_center(recv_img, cx - int(bw*0.31), start_y + 3*gap)
+
+        # ส่งไฟล์กลับ
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as outpdf:
+            doc.save(outpdf.name)
+        doc.close()
+        return send_file(outpdf.name, mimetype="application/pdf", as_attachment=True, download_name="receive_num.pdf")
+
+    except Exception as e:
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
 
 if __name__ == "__main__":
     # สำหรับ Railway ต้องฟังที่ 0.0.0.0
