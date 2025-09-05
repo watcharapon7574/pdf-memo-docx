@@ -875,6 +875,7 @@ def receive_num():
           "receiver": "ดวงดี"
         }
     """
+    print("[DEBUG] /receive_num API called")
     try:
         if 'pdf' not in request.files:
             return jsonify({'error': 'No PDF file uploaded'}), 400
