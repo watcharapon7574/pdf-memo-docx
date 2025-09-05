@@ -922,12 +922,17 @@ def receive_num():
             center_x = cx  # ใช้ค่าเดิม
             print(f"[DEBUG] Normal calculation, center_x: {center_x}, center_y: {center_y}")
         
-        # *** ทดสอบก่อน: วาดจุดเล็กๆ ที่ตำแหน่งที่จะวาด ***
-        print(f"[DEBUG] Testing position visibility at ({center_x}, {center_y})")
-        # วาดจุดทดสอบขนาดเล็ก
-        test_rect = fitz.Rect(center_x-5, center_y-5, center_x+5, center_y+5)
-        page.draw_rect(test_rect, color=(1,0,0), fill=(1,0,0))  # จุดแดงเล็กๆ
-        print(f"[DEBUG] Drew test red dot at {test_rect}")
+        # วาดกรอบสี่เหลี่ยมสีน้ำเงิน (เหมือนตรายาง)
+        # คำนวณขนาดกรอบจากข้อมูล bw, bh
+        box_left = center_x - bw//2
+        box_top = center_y - bh//2
+        box_right = center_x + bw//2
+        box_bottom = center_y + bh//2
+        
+        box_rect = fitz.Rect(box_left, box_top, box_right, box_bottom)
+        box_color = (color[0]/255, color[1]/255, color[2]/255)  # แปลง RGB เป็น 0-1
+        page.draw_rect(box_rect, color=box_color, width=2)  # กรอบสีน้ำเงินหนา 2px
+        print(f"[DEBUG] Drew blue frame at {box_rect} with color {box_color}")
 
         # *** ลบ test text ออก และใช้ตัวอย่างง่ายๆ ***
         
