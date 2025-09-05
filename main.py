@@ -923,11 +923,13 @@ def receive_num():
             print(f"[DEBUG] Normal calculation, center_x: {center_x}, center_y: {center_y}")
         
         # วาดกรอบสี่เหลี่ยมสีน้ำเงิน (เหมือนตรายาง)
-        # คำนวณขนาดกรอบจากข้อมูล bw, bh
-        box_left = center_x - bw//2
-        box_top = center_y - bh//2
-        box_right = center_x + bw//2
-        box_bottom = center_y + bh//2
+        # ใช้ขนาดกรอบที่เหมาะสมกับข้อความ (ไม่ใช้ bw, bh ที่ใหญ่เกินไป)
+        frame_width = 320  # ความกว้างกรอบที่เหมาะสม
+        frame_height = 120  # ความสูงกรอบที่เหมาะสม
+        box_left = center_x - frame_width//2
+        box_top = center_y - frame_height//2
+        box_right = center_x + frame_width//2
+        box_bottom = center_y + frame_height//2
         
         box_rect = fitz.Rect(box_left, box_top, box_right, box_bottom)
         box_color = (color[0]/255, color[1]/255, color[2]/255)  # แปลง RGB เป็น 0-1
