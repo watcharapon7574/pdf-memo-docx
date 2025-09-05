@@ -941,7 +941,27 @@ def receive_num():
             center_y = page_h - cy  # flip อย่างเดียวพอ
             print(f"[DEBUG] Normal calculation, center_y: {center_y}")
 
-        # เส้นหัวข้อกรอบตรา 4 บรรทัด (หนา)
+        # *** TEST: วาดข้อความทดสอบในหลายๆ ตำแหน่ง ***
+        test_text = "TEST TEXT"
+        test_positions = [
+            (100, 100),    # บนซ้าย
+            (page.rect.width/2, 100),  # บนกลาง
+            (page.rect.width-100, 100),  # บนขวา
+            (100, page.rect.height/2),   # กลางซ้าย
+            (page.rect.width/2, page.rect.height/2),  # กึ่งกลางหน้า
+            (page.rect.width-100, page.rect.height/2),  # กลางขวา
+            (100, page.rect.height-100),  # ล่างซ้าย
+            (page.rect.width/2, page.rect.height-100),  # ล่างกลาง
+            (page.rect.width-100, page.rect.height-100),  # ล่างขวา
+        ]
+        
+        for i, (test_x, test_y) in enumerate(test_positions):
+            print(f"[DEBUG] Drawing test text {i+1} at ({test_x}, {test_y})")
+            img = draw_text_img(f"{test_text} {i+1}", size=16, bold=True)
+            paste_center(img, test_x, test_y)
+        
+        # เส้นหัวข้อกรอบตรา 4 บรรทัด (หนา) - commented out for testing
+        """
         header_lines = [
             "ศูนย์การศึกษาพิเศษ เขตการศึกษา ๖ จ.ลพบุรี",
             "เลขทะเบียนรับที่ ..........",
@@ -958,9 +978,9 @@ def receive_num():
             y_pos = start_y + i*gap
             print(f"[DEBUG] Position: cx={cx}, y={y_pos}")
             paste_center(img, cx, y_pos)
+        """
 
-        # ค่าที่ผู้ใช้กรอก จะถูกแปะทับในตำแหน่งเคาะช่อง
-        # ปรับ offset ให้ตรงกับภาพตัวอย่าง
+        # *** TEST: วาดข้อมูลที่ผู้ใช้กรอกในตำแหน่งที่ง่ายต่อการเห็น ***
         register_no = p.get('register_no','')
         date_text = p.get('date','')
         time_text = p.get('time','')
@@ -968,21 +988,22 @@ def receive_num():
         
         print(f"[DEBUG] Data to insert: register_no='{register_no}', date='{date_text}', time='{time_text}', receiver='{receiver_text}'")
         
+        # วาดข้อมูลทดสอบที่กึ่งกลางหน้าให้เห็นชัด
         if register_no:
-            reg_img = draw_text_img(register_no, size=20, bold=True)
-            paste_center(reg_img, cx + int(bw*0.30), start_y + 1*gap)
+            reg_img = draw_text_img(f"เลขทะเบียน: {register_no}", size=20, bold=True)
+            paste_center(reg_img, page.rect.width/2, page.rect.height/2 - 60)
 
         if date_text:
-            date_img = draw_text_img(date_text, size=18)
-            paste_center(date_img, cx - int(bw*0.31), start_y + 2*gap)
+            date_img = draw_text_img(f"วันที่: {date_text}", size=18)
+            paste_center(date_img, page.rect.width/2, page.rect.height/2 - 20)
 
         if time_text:
-            time_img = draw_text_img(time_text, size=18)
-            paste_center(time_img, cx + int(bw*0.32), start_y + 2*gap)
+            time_img = draw_text_img(f"เวลา: {time_text}", size=18)
+            paste_center(time_img, page.rect.width/2, page.rect.height/2 + 20)
 
         if receiver_text:
-            recv_img = draw_text_img(receiver_text, size=18)
-            paste_center(recv_img, cx - int(bw*0.31), start_y + 3*gap)
+            recv_img = draw_text_img(f"ผู้รับ: {receiver_text}", size=18)
+            paste_center(recv_img, page.rect.width/2, page.rect.height/2 + 60)
 
         # ส่งไฟล์กลับ
         print("[DEBUG] Saving final PDF...")
