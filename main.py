@@ -905,27 +905,6 @@ def receive_num():
         if not os.path.isfile(font_path) or not os.path.isfile(bold_font_path):
             return jsonify({'error': 'THSarabunNew fonts not found'}), 500
 
-        # ใช้ฟังก์ชันวาดข้อความที่มีอยู่แล้ว
-        def draw_text_img(text, size=18, bold=False):
-            fp = bold_font_path if bold else font_path
-            print(f"[DEBUG] Creating text image: '{text}', size={size}, bold={bold}, font={fp}")
-            with open('/tmp/debug.log', 'a') as f:
-                f.write(f"[DEBUG] Creating text image: '{text}', size={size}, bold={bold}\n")
-            img = draw_text_image(to_thai_digits(text), fp, size, color, scale=1)
-            print(f"[DEBUG] Text image created: {img.width}x{img.height}")
-            with open('/tmp/debug.log', 'a') as f:
-                f.write(f"[DEBUG] Text image created: {img.width}x{img.height}\n")
-            return img
-
-        # helper แปะภาพลงหน้าแบบ center positioning
-        def paste_center(img, center_x, center_y):
-            left = center_x - img.width//2
-            top  = center_y - img.height//2
-            rect = fitz.Rect(left, top, left+img.width, top+img.height)
-            print(f"[DEBUG] Pasting image at rect: {rect}, image size: {img.width}x{img.height}")
-            bio = io.BytesIO(); img.save(bio, format='PNG')
-            page.insert_image(rect, stream=bio.getvalue())
-            print(f"[DEBUG] Image inserted successfully")
 
         # คำนวณแกน Y: รับพิกัดจากบนซ้าย (สไตล์พิกัดภาพสแกน)
         page_h = page.rect.height
@@ -971,24 +950,40 @@ def receive_num():
         
         print(f"[DEBUG] Data to insert: register_no='{register_no}', date='{date_text}', time='{time_text}', receiver='{receiver_text}'")
         
-        # ใช้ PyMuPDF text rendering แทน PIL (แก้ปัญหาอักษรขาด)
-        fontsize = 18
-        text_color = (color[0]/255, color[1]/255, color[2]/255)  # แปลงเป็น 0-1
+        # ใช้วิธีเดียวกับ endpoint อื่น - draw_text_image + insert_image
+        def draw_text_img(text, size=18, bold=False):
+            fp = bold_font_path if bold else font_path
+            print(f"[DEBUG] Creating text image: '{text}', size={size}, bold={bold}, font={fp}")
+            img = draw_text_image(to_thai_digits(text), fp, size, color, scale=1)
+            print(f"[DEBUG] Text image created: {img.width}x{img.height}")
+            return img
+
+        def paste_center(img, center_x, center_y):
+            left = center_x - img.width//2
+            top  = center_y - img.height//2
+            rect = fitz.Rect(left, top, left+img.width, top+img.height)
+            print(f"[DEBUG] Pasting image at rect: {rect}, image size: {img.width}x{img.height}")
+            bio = io.BytesIO(); img.save(bio, format='PNG')
+            page.insert_image(rect, stream=bio.getvalue())
+            print(f"[DEBUG] Image inserted successfully")
         
-        # ใส่ข้อมูลจริง
-        lines = [
+        # เส้นหัวข้อกรอบตรา 4 บรรทัด (หนา)
+        header_lines = [
+            "ศูนย์การศึกษาพิเศษ เขตการศึกษา ๖ จ.ลพบุรี",
             f"เลขทะเบียนรับที่ {register_no}",
             f"วันที่ {date_text} เวลา {time_text}",
             f"ผู้รับ {receiver_text}"
         ]
-        
-        # กำหนดตำแหน่งเริ่มต้น (center)
-        start_y = page.rect.height / 2 - 30
-        for i, line in enumerate(lines):
-            y_pos = start_y + (i * 25)
-            print(f"[DEBUG] Writing line: {line} at y={y_pos}")
-            page.insert_text((page.rect.width/2 - len(line)*4, y_pos), 
-                           line, fontsize=fontsize, color=text_color)
+        gap = int(bh/4)  # ระยะห่างแต่ละบรรทัดในกรอบ
+
+        start_y = center_y - ( (len(header_lines)-1) * gap // 2 )
+        print(f"[DEBUG] start_y: {start_y}, gap: {gap}")
+        for i, text in enumerate(header_lines):
+            print(f"[DEBUG] Drawing header line {i}: {text}")
+            img = draw_text_img(text, size=20, bold=True)
+            y_pos = start_y + i*gap
+            print(f"[DEBUG] Position: cx={cx}, y={y_pos}")
+            paste_center(img, cx, y_pos)
 
         # ส่งไฟล์กลับ
         print("[DEBUG] Saving final PDF...")
