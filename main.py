@@ -882,7 +882,18 @@ def receive_num():
         if 'payload' not in request.form:
             return jsonify({'error': 'No payload'}), 400
 
+        # *** DEBUG: Return payload information instead of processing ***
         p = json.loads(request.form['payload'])
+        debug_info = {
+            'status': 'debug_mode',
+            'payload_received': p,
+            'pdf_filename': request.files['pdf'].filename,
+            'pdf_size': len(request.files['pdf'].read())
+        }
+        return jsonify(debug_info)
+        
+        # Original code below (temporarily disabled)
+        """
         print(f"[DEBUG] Payload received: {p}")
         page_no = int(p.get('page', 0))
         cx, cy = int(p['x']), int(p['y'])
