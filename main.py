@@ -914,11 +914,20 @@ def receive_num():
         if cy > page_h:
             # ลองใช้พิกัดตรงกลางหน้าแทน
             center_y = page_h / 2
-            print(f"[DEBUG] cy={cy} > page_h={page_h}, using center instead: {center_y}")
+            center_x = page.rect.width / 2  # ใช้กลางหน้าด้วย
+            print(f"[DEBUG] cy={cy} > page_h={page_h}, using page center instead: cx={center_x}, cy={center_y}")
         else:
             # เอากึ่งกลางจริงของกรอบในพิกัด PDF
             center_y = page_h - cy  # flip อย่างเดียวพอ
-            print(f"[DEBUG] Normal calculation, center_y: {center_y}")
+            center_x = cx  # ใช้ค่าเดิม
+            print(f"[DEBUG] Normal calculation, center_x: {center_x}, center_y: {center_y}")
+        
+        # *** ทดสอบก่อน: วาดจุดเล็กๆ ที่ตำแหน่งที่จะวาด ***
+        print(f"[DEBUG] Testing position visibility at ({center_x}, {center_y})")
+        # วาดจุดทดสอบขนาดเล็ก
+        test_rect = fitz.Rect(center_x-5, center_y-5, center_x+5, center_y+5)
+        page.draw_rect(test_rect, color=(1,0,0), fill=(1,0,0))  # จุดแดงเล็กๆ
+        print(f"[DEBUG] Drew test red dot at {test_rect}")
 
         # *** ลบ test text ออก และใช้ตัวอย่างง่ายๆ ***
         
@@ -938,8 +947,8 @@ def receive_num():
             print(f"[DEBUG] Drawing header line {i}: {text}")
             img = draw_text_img(text, size=20, bold=True)
             y_pos = start_y + i*gap
-            print(f"[DEBUG] Position: cx={cx}, y={y_pos}")
-            paste_center(img, cx, y_pos)
+            print(f"[DEBUG] Position: center_x={center_x}, y={y_pos}")
+            paste_center(img, center_x, y_pos)
         """
 
         # วาดข้อมูลตรา - ใช้ PyMuPDF text แทน PIL
@@ -982,8 +991,8 @@ def receive_num():
             print(f"[DEBUG] Drawing header line {i}: {text}")
             img = draw_text_img(text, size=20, bold=True)
             y_pos = start_y + i*gap
-            print(f"[DEBUG] Position: cx={cx}, y={y_pos}")
-            paste_center(img, cx, y_pos)
+            print(f"[DEBUG] Position: center_x={center_x}, y={y_pos}")
+            paste_center(img, center_x, y_pos)
 
         # ส่งไฟล์กลับ
         print("[DEBUG] Saving final PDF...")
