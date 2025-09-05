@@ -893,13 +893,12 @@ def receive_num():
         return jsonify(debug_info)
         
         # Original code below (temporarily disabled)
-        """
-        print(f"[DEBUG] Payload received: {p}")
-        page_no = int(p.get('page', 0))
-        cx, cy = int(p['x']), int(p['y'])
-        bw, bh = int(p['width']), int(p['height'])
-        color = tuple(p.get('color', [2,53,139]))
-        print(f"[DEBUG] Coordinates: cx={cx}, cy={cy}, bw={bw}, bh={bh}, color={color}")
+        # print(f"[DEBUG] Payload received: {p}")
+        # page_no = int(p.get('page', 0))
+        # cx, cy = int(p['x']), int(p['y'])
+        # bw, bh = int(p['width']), int(p['height'])
+        # color = tuple(p.get('color', [2,53,139]))
+        # print(f"[DEBUG] Coordinates: cx={cx}, cy={cy}, bw={bw}, bh={bh}, color={color}")
 
         # เปิด PDF
         pdf_bytes = request.files['pdf'].read()
