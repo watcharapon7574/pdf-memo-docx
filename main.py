@@ -882,23 +882,13 @@ def receive_num():
         if 'payload' not in request.form:
             return jsonify({'error': 'No payload'}), 400
 
-        # *** DEBUG: Return payload information instead of processing ***
         p = json.loads(request.form['payload'])
-        debug_info = {
-            'status': 'debug_mode',
-            'payload_received': p,
-            'pdf_filename': request.files['pdf'].filename,
-            'pdf_size': len(request.files['pdf'].read())
-        }
-        return jsonify(debug_info)
-        
-        # Original code below (temporarily disabled)
-        # print(f"[DEBUG] Payload received: {p}")
-        # page_no = int(p.get('page', 0))
-        # cx, cy = int(p['x']), int(p['y'])
-        # bw, bh = int(p['width']), int(p['height'])
-        # color = tuple(p.get('color', [2,53,139]))
-        # print(f"[DEBUG] Coordinates: cx={cx}, cy={cy}, bw={bw}, bh={bh}, color={color}")
+        print(f"[DEBUG] Payload received: {p}")
+        page_no = int(p.get('page', 0))
+        cx, cy = int(p['x']), int(p['y'])
+        bw, bh = int(p['width']), int(p['height'])
+        color = tuple(p.get('color', [2,53,139]))
+        print(f"[DEBUG] Coordinates: cx={cx}, cy={cy}, bw={bw}, bh={bh}, color={color}")
 
         # เปิด PDF
         pdf_bytes = request.files['pdf'].read()
@@ -939,9 +929,17 @@ def receive_num():
 
         # คำนวณแกน Y: รับพิกัดจากบนซ้าย (สไตล์พิกัดภาพสแกน)
         page_h = page.rect.height
-        # เอากึ่งกลางจริงของกรอบในพิกัด PDF
-        center_y = page_h - cy  # flip อย่างเดียวพอ
-        print(f"[DEBUG] Page height: {page_h}, center_y: {center_y}")
+        print(f"[DEBUG] Page height: {page_h}, original cy: {cy}")
+        
+        # ถ้า cy มากกว่าความสูงหน้า แปลว่าเป็น coordinate ที่ไม่ถูกต้อง
+        if cy > page_h:
+            # ลองใช้พิกัดตรงกลางหน้าแทน
+            center_y = page_h / 2
+            print(f"[DEBUG] cy={cy} > page_h={page_h}, using center instead: {center_y}")
+        else:
+            # เอากึ่งกลางจริงของกรอบในพิกัด PDF
+            center_y = page_h - cy  # flip อย่างเดียวพอ
+            print(f"[DEBUG] Normal calculation, center_y: {center_y}")
 
         # เส้นหัวข้อกรอบตรา 4 บรรทัด (หนา)
         header_lines = [
