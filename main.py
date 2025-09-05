@@ -977,10 +977,16 @@ def receive_num():
             paste_center(recv_img, cx - int(bw*0.31), start_y + 3*gap)
 
         # ส่งไฟล์กลับ
+        print("[DEBUG] Saving final PDF...")
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as outpdf:
             doc.save(outpdf.name)
         doc.close()
-        return send_file(outpdf.name, mimetype="application/pdf", as_attachment=True, download_name="receive_num.pdf")
+        print(f"[DEBUG] PDF saved, sending response...")
+        
+        # เพิ่ม debug response header
+        response = send_file(outpdf.name, mimetype="application/pdf", as_attachment=True, download_name="receive_num.pdf")
+        response.headers['X-Debug'] = 'receive_num_processed'
+        return response
 
     except Exception as e:
         print(traceback.format_exc())
