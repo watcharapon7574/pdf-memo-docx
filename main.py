@@ -907,15 +907,24 @@ def receive_num():
         # ใช้ฟังก์ชันวาดข้อความที่มีอยู่แล้ว
         def draw_text_img(text, size=18, bold=False):
             fp = bold_font_path if bold else font_path
-            return draw_text_image(to_thai_digits(text), fp, size, color, scale=1)
+            print(f"[DEBUG] Creating text image: '{text}', size={size}, bold={bold}, font={fp}")
+            with open('/tmp/debug.log', 'a') as f:
+                f.write(f"[DEBUG] Creating text image: '{text}', size={size}, bold={bold}\n")
+            img = draw_text_image(to_thai_digits(text), fp, size, color, scale=1)
+            print(f"[DEBUG] Text image created: {img.width}x{img.height}")
+            with open('/tmp/debug.log', 'a') as f:
+                f.write(f"[DEBUG] Text image created: {img.width}x{img.height}\n")
+            return img
 
         # helper แปะภาพลงหน้าแบบ center positioning
         def paste_center(img, center_x, center_y):
             left = center_x - img.width//2
             top  = center_y - img.height//2
             rect = fitz.Rect(left, top, left+img.width, top+img.height)
+            print(f"[DEBUG] Pasting image at rect: {rect}, image size: {img.width}x{img.height}")
             bio = io.BytesIO(); img.save(bio, format='PNG')
             page.insert_image(rect, stream=bio.getvalue())
+            print(f"[DEBUG] Image inserted successfully")
 
         # คำนวณแกน Y: รับพิกัดจากบนซ้าย (สไตล์พิกัดภาพสแกน)
         page_h = page.rect.height
