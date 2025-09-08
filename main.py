@@ -990,7 +990,7 @@ def receive_num():
             f"วันที่ {date_text} เวลา {time_text}",
             f"ผู้รับ {receiver_text}"
         ]
-        gap = 25  # ระยะห่างแต่ละบรรทัดใหม่ (แทนที่ bh/4 ที่มากเกินไป)
+        gap = 16  # ระยะห่างแต่ละบรรทัดใหม่ (แทนที่ bh/4 ที่มากเกินไป)
 
         start_y = center_y - ( (len(header_lines)-1) * gap // 2 )
         print(f"[DEBUG] start_y: {start_y}, gap: {gap}")
