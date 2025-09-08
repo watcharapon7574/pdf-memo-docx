@@ -924,7 +924,7 @@ def receive_num():
         
         # วาดกรอบสี่เหลี่ยมสีน้ำเงิน (เหมือนตรายาง)
         # ใช้ขนาดกรอบที่เหมาะสมกับข้อความ (ไม่ใช้ bw, bh ที่ใหญ่เกินไป)
-        frame_width = 270  # ความกว้างกรอบที่เหมาะสม
+        frame_width = 220  # ความกว้างกรอบที่เหมาะสม
         frame_height = 100  # ความสูงกรอบที่เหมาะสม
         box_left = center_x - frame_width//2
         box_top = center_y - frame_height//2
