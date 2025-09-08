@@ -910,7 +910,7 @@ def receive_num():
         
         # คำนวณตำแหน่งมุมขวาบน (เว้นขอบเล็กน้อย)
         margin = 20  # เว้นขอบ 20 pixel
-        frame_width = 220
+        frame_width = 200
         frame_height = 80
         
         # ตำแหน่งกึ่งกลางตรายาง = มุมขวาบน - ขอบ - ครึ่งตรายาง
@@ -927,8 +927,9 @@ def receive_num():
         box_bottom = center_y + frame_height//2
         
         box_rect = fitz.Rect(box_left, box_top, box_right, box_bottom)
+        # ใช้สีเดียวกับฟอนต์ (สีน้ำเงินอ่อนลง)
         box_color = (color[0]/255, color[1]/255, color[2]/255)  # แปลง RGB เป็น 0-1
-        page.draw_rect(box_rect, color=box_color, width=2)  # กรอบสีน้ำเงินหนา 2px
+        page.draw_rect(box_rect, color=box_color, width=1)  # กรอบสีเดียวกับฟอนต์ หนา 1px
         print(f"[DEBUG] Drew blue frame at {box_rect} with color {box_color}")
 
         # *** ลบ test text ออก และใช้ตัวอย่างง่ายๆ ***
