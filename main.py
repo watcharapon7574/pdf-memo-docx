@@ -924,8 +924,8 @@ def receive_num():
         
         # วาดกรอบสี่เหลี่ยมสีน้ำเงิน (เหมือนตรายาง)
         # ใช้ขนาดกรอบที่เหมาะสมกับข้อความ (ไม่ใช้ bw, bh ที่ใหญ่เกินไป)
-        frame_width = 320  # ความกว้างกรอบที่เหมาะสม
-        frame_height = 120  # ความสูงกรอบที่เหมาะสม
+        frame_width = 270  # ความกว้างกรอบที่เหมาะสม
+        frame_height = 100  # ความสูงกรอบที่เหมาะสม
         box_left = center_x - frame_width//2
         box_top = center_y - frame_height//2
         box_right = center_x + frame_width//2
@@ -952,7 +952,7 @@ def receive_num():
         print(f"[DEBUG] start_y: {start_y}, gap: {gap}")
         for i, text in enumerate(header_lines):
             print(f"[DEBUG] Drawing header line {i}: {text}")
-            img = draw_text_img(text, size=20, bold=True)
+            img = draw_text_img(text, size=16, bold=True)
             y_pos = start_y + i*gap
             print(f"[DEBUG] Position: center_x={center_x}, y={y_pos}")
             paste_center(img, center_x, y_pos)
@@ -996,7 +996,7 @@ def receive_num():
         print(f"[DEBUG] start_y: {start_y}, gap: {gap}")
         for i, text in enumerate(header_lines):
             print(f"[DEBUG] Drawing header line {i}: {text}")
-            img = draw_text_img(text, size=20, bold=True)
+            img = draw_text_img(text, size=16, bold=True)
             y_pos = start_y + i*gap
             print(f"[DEBUG] Position: center_x={center_x}, y={y_pos}")
             paste_center(img, center_x, y_pos)
