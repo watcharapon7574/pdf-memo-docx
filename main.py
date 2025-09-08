@@ -863,17 +863,17 @@ def merge_pdfs():
 def receive_num():
     """
     multipart/form-data:
-      - pdf: ไฟล์ PDF
+      - pdf: ไฟล์ PDF  
       - payload: JSON string:
         {
           "page": 0,
-          "x": 980, "y": 2060, "width": 1050, "height": 560,  # กึ่งกลาง+กรอบของตรา
           "color": [2,53,139],
           "register_no": "2567/506",
           "date": "20 ก.ย. 67",
           "time": "10.30 น.",
           "receiver": "ดวงดี"
         }
+    หมายเหตุ: ตรายางจะวาดที่มุมขวาบนแบบ fix ไม่ต้องส่ง x,y
     """
     print("[DEBUG] /receive_num API called")
     try:
@@ -885,10 +885,8 @@ def receive_num():
         p = json.loads(request.form['payload'])
         print(f"[DEBUG] Payload received: {p}")
         page_no = int(p.get('page', 0))
-        cx, cy = int(p['x']), int(p['y'])
-        bw, bh = int(p['width']), int(p['height'])
         color = tuple(p.get('color', [2,53,139]))
-        print(f"[DEBUG] Coordinates: cx={cx}, cy={cy}, bw={bw}, bh={bh}, color={color}")
+        print(f"[DEBUG] Page: {page_no}, color: {color}")
 
         # เปิด PDF
         pdf_bytes = request.files['pdf'].read()
@@ -906,26 +904,23 @@ def receive_num():
             return jsonify({'error': 'THSarabunNew fonts not found'}), 500
 
 
-        # คำนวณแกน Y: รับพิกัดจากบนซ้าย (สไตล์พิกัดภาพสแกน)
+        # Fix ตำแหน่งที่มุมขวาบนของกระดาษ
+        page_w = page.rect.width
         page_h = page.rect.height
-        print(f"[DEBUG] Page height: {page_h}, original cy: {cy}")
         
-        # ถ้า cy มากกว่าความสูงหน้า แปลว่าเป็น coordinate ที่ไม่ถูกต้อง
-        if cy > page_h:
-            # ลองใช้พิกัดตรงกลางหน้าแทน
-            center_y = page_h / 2
-            center_x = page.rect.width / 2  # ใช้กลางหน้าด้วย
-            print(f"[DEBUG] cy={cy} > page_h={page_h}, using page center instead: cx={center_x}, cy={center_y}")
-        else:
-            # เอากึ่งกลางจริงของกรอบในพิกัด PDF
-            center_y = page_h - cy  # flip อย่างเดียวพอ
-            center_x = cx  # ใช้ค่าเดิม
-            print(f"[DEBUG] Normal calculation, center_x: {center_x}, center_y: {center_y}")
+        # คำนวณตำแหน่งมุมขวาบน (เว้นขอบเล็กน้อย)
+        margin = 20  # เว้นขอบ 20 pixel
+        frame_width = 220
+        frame_height = 80
+        
+        # ตำแหน่งกึ่งกลางตรายาง = มุมขวาบน - ขอบ - ครึ่งตรายาง
+        center_x = page_w - margin - frame_width//2
+        center_y = margin + frame_height//2
+        
+        print(f"[DEBUG] Page size: {page_w}x{page_h}")
+        print(f"[DEBUG] Fixed stamp position: center_x={center_x}, center_y={center_y}")
         
         # วาดกรอบสี่เหลี่ยมสีน้ำเงิน (เหมือนตรายาง)
-        # ใช้ขนาดกรอบที่เหมาะสมกับข้อความ (ไม่ใช้ bw, bh ที่ใหญ่เกินไป)
-        frame_width = 220  # ความกว้างกรอบที่เหมาะสม
-        frame_height = 80  # ความสูงกรอบที่เหมาะสม
         box_left = center_x - frame_width//2
         box_top = center_y - frame_height//2
         box_right = center_x + frame_width//2
