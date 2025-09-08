@@ -929,7 +929,7 @@ def receive_num():
         box_rect = fitz.Rect(box_left, box_top, box_right, box_bottom)
         # ใช้สีเดียวกับฟอนต์ (สีน้ำเงินอ่อนลง)
         box_color = (color[0]/255, color[1]/255, color[2]/255)  # แปลง RGB เป็น 0-1
-        page.draw_rect(box_rect, color=box_color, width=1)  # กรอบสีเดียวกับฟอนต์ หนา 1px
+        page.draw_rect(box_rect, color=box_color, width=2)  # กรอบสีเดียวกับฟอนต์ หนา 1px
         print(f"[DEBUG] Drew blue frame at {box_rect} with color {box_color}")
 
         # *** ลบ test text ออก และใช้ตัวอย่างง่ายๆ ***
@@ -1013,6 +1013,161 @@ def receive_num():
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
+@app.route('/stamp_summary', methods=['POST'])
+def stamp_summary():
+    """
+    multipart/form-data:
+      - pdf: ไฟล์ PDF ต้นฉบับ
+      - summary: สรุปสั้นใจความ (string, 1-2 บรรทัด)
+      - group_name: ชื่อกลุ่มงานที่มอบหมาย (string)
+      - sign_png: ไฟล์ลายเซ็นธุรการ (PNG โปร่งใส)
+      - receiver_name: ชื่อธุรการผู้รับ (string)  
+      - date: วดป แบบที่ป้อนมาได้เลย (เช่น 20 ก.ย. 67)
+    
+    ตราจะวาดที่มุมซ้ายล่างของกระดาษ
+    """
+    print("[DEBUG] /stamp_summary API called")
+    try:
+        # ตรวจสอบไฟล์และข้อมูลที่ส่งมา
+        if 'pdf' not in request.files:
+            return jsonify({'error': 'No PDF file uploaded'}), 400
+        if 'sign_png' not in request.files:
+            return jsonify({'error': 'No signature PNG file uploaded'}), 400
+        
+        required_fields = ['summary', 'group_name', 'receiver_name', 'date']
+        for field in required_fields:
+            if field not in request.form:
+                return jsonify({'error': f'Missing field: {field}'}), 400
+
+        # อ่านข้อมูล
+        pdf_file = request.files['pdf']
+        sign_file = request.files['sign_png']
+        summary = request.form['summary']
+        group_name = request.form['group_name'] 
+        receiver_name = request.form['receiver_name']
+        date = request.form['date']
+        
+        print(f"[DEBUG] Data: summary={summary}, group={group_name}, receiver={receiver_name}, date={date}")
+
+        # เปิด PDF
+        pdf_bytes = pdf_file.read()
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        page = doc[0]  # ใช้หน้าแรก
+
+        # ฟอนต์ไทย
+        font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew.ttf")
+        bold_font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew Bold.ttf")
+        if not os.path.isfile(font_path) or not os.path.isfile(bold_font_path):
+            return jsonify({'error': 'THSarabunNew fonts not found'}), 500
+
+        # คำนวณตำแหน่งมุมซ้ายล่าง
+        page_w = page.rect.width
+        page_h = page.rect.height
+        margin = 30
+        stamp_width = 400
+        stamp_height = 150
+        
+        # ตำแหน่งกึ่งกลางตรา = มุมซ้ายล่าง + ขอบ + ครึ่งตรา
+        center_x = margin + stamp_width//2
+        center_y = page_h - margin - stamp_height//2
+        
+        print(f"[DEBUG] Page size: {page_w}x{page_h}")
+        print(f"[DEBUG] Stamp position: center_x={center_x}, center_y={center_y}")
+
+        # วาดกรอบตรา
+        box_left = center_x - stamp_width//2
+        box_top = center_y - stamp_height//2  
+        box_right = center_x + stamp_width//2
+        box_bottom = center_y + stamp_height//2
+        
+        box_rect = fitz.Rect(box_left, box_top, box_right, box_bottom)
+        box_color = (2/255, 53/255, 139/255)  # สีน้ำเงิน
+        page.draw_rect(box_rect, color=box_color, width=2)
+
+        # สร้างฟังก์ชันวาดข้อความ
+        def draw_text_img(text, size=16, bold=False):
+            fp = bold_font_path if bold else font_path
+            color_rgb = (2, 53, 139)  # สีน้ำเงิน
+            img = draw_text_image(to_thai_digits(text), fp, size, color_rgb, scale=1)
+            return img
+
+        def paste_at_position(img, x, y):
+            rect = fitz.Rect(x, y, x+img.width, y+img.height)
+            bio = io.BytesIO(); img.save(bio, format='PNG')
+            page.insert_image(rect, stream=bio.getvalue())
+
+        # วาดข้อความในตรา
+        line_spacing = 18
+        current_y = box_top + 15  # เริ่มจากด้านบนของกรอบ + padding
+        
+        # บรรทัดที่ 1: เรียน ผอ. ศกศ.เขต ๖ จ.ลพบุรี
+        text1 = "เรียน ผอ. ศกศ.เขต ๖ จ.ลพบุรี"
+        img1 = draw_text_img(text1, size=16, bold=True)
+        paste_at_position(img1, box_left + 10, current_y)
+        current_y += line_spacing
+        
+        # บรรทัดที่ 2-3: summary (อาจมี 1-2 บรรทัด)
+        summary_lines = summary.split('\n')
+        for line in summary_lines:
+            if line.strip():  # ถ้าไม่ใช่บรรทัดว่าง
+                img_summary = draw_text_img(line, size=16, bold=False)
+                paste_at_position(img_summary, box_left + 10, current_y)
+            current_y += line_spacing
+        
+        current_y += 5  # เว้นบรรทัด
+        
+        # บรรทัดมอบหมาย
+        assign_text = f"เห็นควรมอบ {group_name}"
+        img_assign = draw_text_img(assign_text, size=16, bold=False)
+        paste_at_position(img_assign, box_left + 10, current_y)
+        current_y += line_spacing + 5
+        
+        # ลายเซ็น
+        sign_img = Image.open(sign_file)
+        # ปรับขนาดลายเซ็น
+        sign_height = 30
+        ratio = sign_height / sign_img.height
+        sign_width = int(sign_img.width * ratio)
+        sign_img = sign_img.resize((sign_width, sign_height), Image.LANCZOS)
+        
+        # วางลายเซ็น
+        sign_y = current_y
+        paste_at_position(sign_img, box_left + 60, sign_y)
+        
+        # ข้อความลงชื่อ
+        sign_text = "ลงชื่อ"
+        img_sign_text = draw_text_img(sign_text, size=16, bold=False)
+        paste_at_position(img_sign_text, box_left + 10, sign_y)
+        
+        current_y += 25
+        
+        # ผู้รับ
+        receiver_text = f"ผู้รับ  {receiver_name}"
+        img_receiver = draw_text_img(receiver_text, size=16, bold=False)
+        paste_at_position(img_receiver, box_left + 10, current_y)
+        current_y += line_spacing + 5
+        
+        # วันที่
+        date_text = f"วันที่ {date}"
+        img_date = draw_text_img(date_text, size=16, bold=False)
+        paste_at_position(img_date, box_left + 10, current_y)
+
+        # ส่งไฟล์กลับ
+        print("[DEBUG] Saving final PDF...")
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as outpdf:
+            doc.save(outpdf.name)
+            doc.close()
+            print(f"[DEBUG] PDF saved, sending response...")
+            
+            response = send_file(outpdf.name, mimetype="application/pdf", as_attachment=True, download_name="summary_stamped.pdf")
+            response.headers['X-Debug'] = 'stamp_summary_processed'
+            return response
+
+    except Exception as e:
+        print(f"[ERROR] {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == "__main__":
     # สำหรับ Railway ต้องฟังที่ 0.0.0.0
