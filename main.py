@@ -1095,23 +1095,29 @@ def stamp_summary():
             if text.startswith("เรื่อง "):
                 words = text.split(' ')
                 lines = []
-                current_line = "เรื่อง"
                 
-                # เพิ่มคำทีละคำจนกว่าจะเกินความกว้าง
-                for word in words[1:]:
-                    test_line = current_line + " " + word
-                    test_img = draw_text_img(test_line, size=16, bold=False)
+                # บังคับให้ "เรื่อง" อยู่กับคำแรกเสมอ
+                if len(words) >= 2:
+                    current_line = f"เรื่อง {words[1]}"  # เริ่มด้วย "เรื่อง คำแรก"
                     
-                    if test_img.width <= available_width:
-                        current_line = test_line
-                    else:
-                        # ถ้าเกิน ให้เก็บบรรทัดปัจจุบันและเริ่มบรรทัดใหม่
+                    # เพิ่มคำที่เหลือทีละคำ
+                    for word in words[2:]:
+                        test_line = current_line + " " + word
+                        test_img = draw_text_img(test_line, size=16, bold=False)
+                        
+                        if test_img.width <= available_width:
+                            current_line = test_line
+                        else:
+                            # ถ้าเกิน ให้เก็บบรรทัดปัจจุบันและเริ่มบรรทัดใหม่
+                            lines.append(current_line)
+                            current_line = word
+                    
+                    if current_line:
                         lines.append(current_line)
-                        current_line = word
-                
-                if current_line:
-                    lines.append(current_line)
-                return lines
+                    return lines
+                else:
+                    # ถ้ามีแค่ "เรื่อง" คำเดียว
+                    return ["เรื่อง"]
             
             # กรณีปกติ - ตัดคำตามช่องว่าง
             words = text.split(' ')
