@@ -1084,7 +1084,7 @@ def stamp_summary():
 
         # ฟังก์ชันตัดข้อความให้พอดีกรอบ (แบบง่าย แต่แม่นยำ)
         def wrap_text(text, max_chars_approx):
-            available_width = stamp_width - 20  # ความกว้างที่ใช้ได้ (ลบ padding)
+            available_width = stamp_width - 30  # เพิ่ม padding เป็น 30 (15 ซ้าย + 15 ขวา)
             
             # ถ้าข้อความสั้น ทดสอบความกว้างจริง
             test_img = draw_text_img(text, size=16, bold=False)
@@ -1187,6 +1187,7 @@ def stamp_summary():
         center_x = margin + stamp_width//2
         center_y = page_h - margin - stamp_height//2
         
+        print(f"[DEBUG] Stamp width: {stamp_width}, available width: {stamp_width - 30}")
         print(f"[DEBUG] Summary text: '{summary}'")
         print(f"[DEBUG] Summary wrapped: {wrap_text(summary, 0)}")
         print(f"[DEBUG] Calculated lines: {total_lines}, height: {calculated_height}, final height: {stamp_height}")
