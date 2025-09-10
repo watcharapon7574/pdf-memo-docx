@@ -1142,8 +1142,8 @@ def stamp_summary():
                                 if s[j] == ' ' or s[j] in '.!?,:;':
                                     return s[:j]
                             
-                            # ถ้าไม่เจอจุดแบ่งคำจนจบข้อความ ให้เอาทั้งหมด
-                            return s
+                            # ถ้าไม่เจอจุดแบ่งคำจนจบข้อความ ตัดที่ตำแหน่ง current_pos
+                            return s[:current_pos]
                 
                 return s
             
