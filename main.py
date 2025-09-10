@@ -1140,18 +1140,18 @@ def stamp_summary():
         other_line_spacing = font_size - 4  # บรรทัดอื่น = ขนาดฟอนต์ - 4 (12)
         
         # นับบรรทัดหัวข้อ "เรียน..."
-        header_wrapped = wrap_text(header_text, 23)
+        header_wrapped = wrap_text(header_text, 0)
         total_lines = len(header_wrapped)
         
         # นับบรรทัดสำหรับ summary
         summary_lines = summary.split('\n')
         for line in summary_lines:
             if line.strip():
-                wrapped_lines = wrap_text(line, 23)
+                wrapped_lines = wrap_text(line, 0)
                 total_lines += len(wrapped_lines)
         
         # นับบรรทัดมอบหมาย
-        assign_wrapped = wrap_text(assign_text, 23)
+        assign_wrapped = wrap_text(assign_text, 0)
         total_lines += len(assign_wrapped)
         
         total_lines += 1  # บรรทัด "ลงชื่อ + ลายเซ็น"
@@ -1181,6 +1181,8 @@ def stamp_summary():
         center_x = margin + stamp_width//2
         center_y = page_h - margin - stamp_height//2
         
+        print(f"[DEBUG] Summary text: '{summary}'")
+        print(f"[DEBUG] Summary wrapped: {wrap_text(summary, 0)}")
         print(f"[DEBUG] Calculated lines: {total_lines}, height: {calculated_height}, final height: {stamp_height}")
         print(f"[DEBUG] Page size: {page_w}x{page_h}")
         print(f"[DEBUG] Stamp position: center_x={center_x}, center_y={center_y}")
@@ -1216,8 +1218,8 @@ def stamp_summary():
         summary_lines = summary.split('\n')
         for line in summary_lines:
             if line.strip():  # ถ้าไม่ใช่บรรทัดว่าง
-                # ตัดข้อความให้พอดีกรอบ (ประมาณ 23 ตัวอักษรตามความกว้างกรอบ)
-                wrapped_lines = wrap_text(line, 23)
+                # ตัดข้อความให้พอดีกรอบ  
+                wrapped_lines = wrap_text(line, 0)  # ไม่ใช้ max_chars_approx
                 for wrapped_line in wrapped_lines:
                     img_summary = draw_text_img(wrapped_line, size=font_size, bold=False)
                     paste_at_position(img_summary, box_left + 10, current_y)
