@@ -1067,7 +1067,7 @@ def stamp_summary():
         page_h = page.rect.height
         margin = 30
         stamp_width = 200
-        stamp_height = 140  # เพิ่มความสูงจาก 120 เป็น 140
+        stamp_height = 120  # ลดกลับเป็น 120
         
         # ตำแหน่งกึ่งกลางตรา = มุมซ้ายล่าง + ขอบ + ครึ่งตรา
         center_x = margin + stamp_width//2
@@ -1092,6 +1092,31 @@ def stamp_summary():
             color_rgb = (2, 53, 139)  # สีน้ำเงิน
             img = draw_text_image(to_thai_digits(text), fp, size, color_rgb, scale=1)
             return img
+        
+        # ฟังก์ชันตัดข้อความให้พอดีกรอบ
+        def wrap_text(text, max_width):
+            if len(text) <= max_width:
+                return [text]
+            
+            words = text.split(' ')
+            lines = []
+            current_line = ""
+            
+            for word in words:
+                if len(current_line + " " + word) <= max_width:
+                    if current_line:
+                        current_line += " " + word
+                    else:
+                        current_line = word
+                else:
+                    if current_line:
+                        lines.append(current_line)
+                    current_line = word
+            
+            if current_line:
+                lines.append(current_line)
+            
+            return lines
 
         def paste_at_position(img, x, y):
             rect = fitz.Rect(x, y, x+img.width, y+img.height)
@@ -1114,9 +1139,14 @@ def stamp_summary():
         summary_lines = summary.split('\n')
         for line in summary_lines:
             if line.strip():  # ถ้าไม่ใช่บรรทัดว่าง
-                img_summary = draw_text_img(line, size=font_size, bold=False)
-                paste_at_position(img_summary, box_left + 10, current_y)
-            current_y += other_line_spacing  # ใช้ระยะห่างบรรทัดอื่น
+                # ตัดข้อความให้พอดีกรอบ (ประมาณ 25 ตัวอักษร)
+                wrapped_lines = wrap_text(line, 25)
+                for wrapped_line in wrapped_lines:
+                    img_summary = draw_text_img(wrapped_line, size=font_size, bold=False)
+                    paste_at_position(img_summary, box_left + 10, current_y)
+                    current_y += other_line_spacing
+            else:
+                current_y += other_line_spacing  # ใช้ระยะห่างบรรทัดอื่น
         
         current_y += 2  # เว้นบรรทัดเล็กน้อย
         
@@ -1124,7 +1154,7 @@ def stamp_summary():
         assign_text = f"เห็นควรมอบ {group_name}"
         img_assign = draw_text_img(assign_text, size=font_size, bold=False)
         paste_at_position(img_assign, box_left + 10, current_y)
-        current_y += other_line_spacing + 5  # ลดระยะห่างก่อนลายเซ็น
+        current_y += other_line_spacing + 8  # เพิ่มระยะห่างก่อนลายเซ็นเล็กน้อย
         
         # ลายเซ็น
         sign_img = Image.open(sign_file)
