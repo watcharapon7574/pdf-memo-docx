@@ -1082,8 +1082,47 @@ def stamp_summary():
             img = draw_text_image(to_thai_digits(text), fp, size, color_rgb, scale=1)
             return img
 
-        # ฟังก์ชันตัดข้อความแบบง่าย - 30 ตัวอักษรต่อบรรทัด
+        # ฟังก์ชันตัดข้อความแบบง่าย - 30 ตัวอักษรต่อบรรทัด (ไม่นับ vowel/tone marks)
         def wrap_text(text, max_chars_approx):
+            # ตัวอักษรไทยที่ไม่ควรนับ (vowel marks, tone marks)
+            thai_marks = set([
+                '\u0E31',  # ั
+                '\u0E34',  # ิ
+                '\u0E35',  # ี
+                '\u0E36',  # ึ
+                '\u0E37',  # ื
+                '\u0E38',  # ุ
+                '\u0E39',  # ู
+                '\u0E3A',  # ฺ
+                '\u0E47',  # ็
+                '\u0E48',  # ่
+                '\u0E49',  # ้
+                '\u0E4A',  # ๊
+                '\u0E4B',  # ๋
+                '\u0E4C',  # ์
+                '\u0E4D',  # ํ
+                '\u0E4E'   # ๎
+            ])
+            
+            def count_visible_chars(s):
+                """นับตัวอักษรที่มองเห็นได้ (ไม่รวม marks)"""
+                return len([c for c in s if c not in thai_marks])
+            
+            def cut_at_visible_chars(s, max_visible):
+                """ตัดข้อความที่ตัวอักษรที่มองเห็นได้"""
+                visible_count = 0
+                cut_pos = 0
+                
+                for i, char in enumerate(s):
+                    if char not in thai_marks:
+                        visible_count += 1
+                        if visible_count >= max_visible:
+                            cut_pos = i + 1
+                            break
+                    cut_pos = i + 1
+                
+                return s[:cut_pos]
+            
             lines = []
             max_chars = 30
             
@@ -1094,18 +1133,19 @@ def stamp_summary():
                     first_group = f"เรื่อง {words[1]}"
                     rest_text = ' '.join(words[2:])
                     
-                    # ถ้า first_group เกิน 30 ตัว ก็ตัดแบบธรรมดา
-                    if len(first_group) > max_chars:
+                    # ถ้า first_group เกิน 30 ตัวอักษรที่มองเห็น ก็ตัดแบบธรรมดา
+                    if count_visible_chars(first_group) > max_chars:
                         text = text  # ใช้วิธีตัดธรรมดา
                     else:
                         # ใส่ first_group ในบรรทัดแรก
                         lines.append(first_group)
                         text = rest_text
             
-            # ตัดที่ 30 ตัวอักษรแบบธรรมดา
-            while len(text) > max_chars:
-                lines.append(text[:max_chars])
-                text = text[max_chars:]
+            # ตัดที่ 30 ตัวอักษรที่มองเห็นได้
+            while count_visible_chars(text) > max_chars:
+                cut_text = cut_at_visible_chars(text, max_chars)
+                lines.append(cut_text)
+                text = text[len(cut_text):]
             
             if text.strip():
                 lines.append(text)
