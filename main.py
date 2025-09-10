@@ -1213,12 +1213,10 @@ def stamp_summary():
         header_wrapped = wrap_text(header_text, 30)
         total_lines = len(header_wrapped)
         
-        # นับบรรทัดสำหรับ summary
-        summary_lines = summary.split('\n')
-        for line in summary_lines:
-            if line.strip():
-                wrapped_lines = wrap_text(line, 30)
-                total_lines += len(wrapped_lines)
+        # นับบรรทัดสำหรับ "เรื่อง" + summary
+        subject_text = f"เรื่อง {summary}"
+        subject_wrapped = wrap_text(subject_text, 30)
+        total_lines += len(subject_wrapped)
         
         # นับบรรทัดมอบหมาย
         assign_wrapped = wrap_text(assign_text, 30)
@@ -1285,32 +1283,39 @@ def stamp_summary():
         paste_at_position(img1, box_left + 10, current_y)
         current_y += first_line_spacing  # ใช้ระยะห่างบรรทัดแรก
         
-        # บรรทัดที่ 2-3: summary (อาจมี 1-2 บรรทัด)
-        summary_lines = summary.split('\n')
-        for line in summary_lines:
-            if line.strip():  # ถ้าไม่ใช่บรรทัดว่าง
-                # ตัดข้อความให้พอดีกรอบ  
-                wrapped_lines = wrap_text(line, 30)  # ไม่ใช้ max_chars_approx
-                for wrapped_line in wrapped_lines:
-                    # Debug: ตรวจสอบ type
-                    if isinstance(wrapped_line, list):
-                        wrapped_line = ' '.join(wrapped_line)
-                    img_summary = draw_text_img(wrapped_line, size=font_size, bold=False)
-                    paste_at_position(img_summary, box_left + 10, current_y)
-                    current_y += other_line_spacing
+        # บรรทัดที่ 2: "เรื่อง" (ตัวหนา) + summary
+        subject_text = f"เรื่อง {summary}"
+        wrapped_lines = wrap_text(subject_text, 30)
+        for i, wrapped_line in enumerate(wrapped_lines):
+            # Debug: ตรวจสอบ type
+            if isinstance(wrapped_line, list):
+                wrapped_line = ' '.join(wrapped_line)
+            
+            # บรรทัดแรกที่มี "เรื่อง" ให้เป็นตัวหนา
+            if i == 0 and wrapped_line.startswith("เรื่อง"):
+                img_summary = draw_text_img(wrapped_line, size=font_size, bold=True)
             else:
-                current_y += other_line_spacing  # ใช้ระยะห่างบรรทัดอื่น
+                img_summary = draw_text_img(wrapped_line, size=font_size, bold=False)
+            
+            paste_at_position(img_summary, box_left + 10, current_y)
+            current_y += other_line_spacing
         
         current_y += 2  # เว้นบรรทัดเล็กน้อย
         
-        # บรรทัดมอบหมาย
+        # บรรทัดมอบหมาย - "เห็นควรมอบ" เป็นตัวหนา
         assign_text = f"เห็นควรมอบ {group_name}"
         assign_wrapped = wrap_text(assign_text, 30)
-        for assign_line in assign_wrapped:
+        for i, assign_line in enumerate(assign_wrapped):
             # Debug: ตรวจสอบ type
             if isinstance(assign_line, list):
                 assign_line = ' '.join(assign_line)
-            img_assign = draw_text_img(assign_line, size=font_size, bold=False)
+            
+            # บรรทัดแรกที่มี "เห็นควรมอบ" ให้เป็นตัวหนา
+            if i == 0 and assign_line.startswith("เห็นควรมอบ"):
+                img_assign = draw_text_img(assign_line, size=font_size, bold=True)
+            else:
+                img_assign = draw_text_img(assign_line, size=font_size, bold=False)
+            
             paste_at_position(img_assign, box_left + 10, current_y)
             current_y += other_line_spacing
         current_y += 12  # เพิ่มระยะห่างก่อนลายเซ็นมากขึ้น
