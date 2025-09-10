@@ -1173,7 +1173,7 @@ def stamp_summary():
                 lines.append(text)
             
             debug_info.append(f"Final result: {len(lines)} lines")
-            return lines, debug_info
+            return lines
 
         # คำนวณจำนวนบรรทัดทั้งหมด
         font_size = 16
