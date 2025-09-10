@@ -1084,36 +1084,44 @@ def stamp_summary():
 
         # ฟังก์ชันตัดข้อความให้พอดีกรอบ (แบบง่าย แต่แม่นยำ)
         def wrap_text(text, max_chars_approx):
-            available_width = stamp_width - 30  # เพิ่ม padding เป็น 30 (15 ซ้าย + 15 ขวา)
+            available_width = stamp_width - 50  # เพิ่ม padding เป็น 50 เพื่อให้แน่ใจ
             
             # ถ้าข้อความสั้น ทดสอบความกว้างจริง
             test_img = draw_text_img(text, size=16, bold=False)
+            print(f"[DEBUG WRAP] Text: '{text}', Text width: {test_img.width}, Available: {available_width}")
             if test_img.width <= available_width:
+                print(f"[DEBUG WRAP] Text fits in one line")
                 return [text]
             
             # ถ้าขึ้นต้นด้วย "เรื่อง" ให้พยายามรักษาไว้ในบรรทัดเดียวกัน
             if text.startswith("เรื่อง "):
+                print(f"[DEBUG WRAP] Processing เรื่อง text")
                 words = text.split(' ')
                 lines = []
                 
                 # บังคับให้ "เรื่อง" อยู่กับคำแรกเสมอ
                 if len(words) >= 2:
                     current_line = f"เรื่อง {words[1]}"  # เริ่มด้วย "เรื่อง คำแรก"
+                    print(f"[DEBUG WRAP] Starting with: '{current_line}'")
                     
                     # เพิ่มคำที่เหลือทีละคำ
-                    for word in words[2:]:
+                    for i, word in enumerate(words[2:]):
                         test_line = current_line + " " + word
                         test_img = draw_text_img(test_line, size=16, bold=False)
+                        print(f"[DEBUG WRAP] Testing: '{test_line}', width: {test_img.width}")
                         
                         if test_img.width <= available_width:
                             current_line = test_line
+                            print(f"[DEBUG WRAP] Fits, continuing...")
                         else:
                             # ถ้าเกิน ให้เก็บบรรทัดปัจจุบันและเริ่มบรรทัดใหม่
+                            print(f"[DEBUG WRAP] Too wide, breaking line")
                             lines.append(current_line)
                             current_line = word
                     
                     if current_line:
                         lines.append(current_line)
+                    print(f"[DEBUG WRAP] Final lines: {lines}")
                     return lines
                 else:
                     # ถ้ามีแค่ "เรื่อง" คำเดียว
@@ -1187,7 +1195,7 @@ def stamp_summary():
         center_x = margin + stamp_width//2
         center_y = page_h - margin - stamp_height//2
         
-        print(f"[DEBUG] Stamp width: {stamp_width}, available width: {stamp_width - 30}")
+        print(f"[DEBUG] Stamp width: {stamp_width}, available width: {stamp_width - 50}")
         print(f"[DEBUG] Summary text: '{summary}'")
         print(f"[DEBUG] Summary wrapped: {wrap_text(summary, 0)}")
         print(f"[DEBUG] Calculated lines: {total_lines}, height: {calculated_height}, final height: {stamp_height}")
