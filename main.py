@@ -1137,14 +1137,19 @@ def stamp_summary():
         # คำนวณตำแหน่งกึ่งกลางของกรอบ
         center_x_frame = box_left + stamp_width//2
         
-        # วางลายเซ็น (กึ่งกลาง)
-        sign_y = current_y
-        paste_at_position(sign_img, center_x_frame - sign_width//2, sign_y)
-        
-        # ข้อความลงชื่อ (กึ่งกลาง)
+        # ข้อความลงชื่อ และลายเซ็น (แบบต่อเนื่องกัน)
         sign_text = "ลงชื่อ"
         img_sign_text = draw_text_img(sign_text, size=font_size, bold=False)
-        paste_at_position(img_sign_text, center_x_frame - img_sign_text.width//2, sign_y)
+        
+        # คำนวณตำแหน่งเริ่มต้นให้อยู่กึ่งกลาง
+        total_width = img_sign_text.width + 5 + sign_width  # ความกว้างรวม (ข้อความ + gap + ลายเซ็น)
+        start_x = center_x_frame - total_width//2
+        
+        sign_y = current_y
+        # วาง "ลงชื่อ" ก่อน
+        paste_at_position(img_sign_text, start_x, sign_y)
+        # วางลายเซ็นติดข้าง
+        paste_at_position(sign_img, start_x + img_sign_text.width + 5, sign_y)
         
         current_y += 20
         
