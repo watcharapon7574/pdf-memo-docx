@@ -1263,6 +1263,9 @@ def stamp_summary():
                 # ตัดข้อความให้พอดีกรอบ  
                 wrapped_lines = wrap_text(line, 30)  # ไม่ใช้ max_chars_approx
                 for wrapped_line in wrapped_lines:
+                    # Debug: ตรวจสอบ type
+                    if isinstance(wrapped_line, list):
+                        wrapped_line = ' '.join(wrapped_line)
                     img_summary = draw_text_img(wrapped_line, size=font_size, bold=False)
                     paste_at_position(img_summary, box_left + 10, current_y)
                     current_y += other_line_spacing
@@ -1273,9 +1276,15 @@ def stamp_summary():
         
         # บรรทัดมอบหมาย
         assign_text = f"เห็นควรมอบ {group_name}"
-        img_assign = draw_text_img(assign_text, size=font_size, bold=False)
-        paste_at_position(img_assign, box_left + 10, current_y)
-        current_y += other_line_spacing + 12  # เพิ่มระยะห่างก่อนลายเซ็นมากขึ้น
+        assign_wrapped = wrap_text(assign_text, 30)
+        for assign_line in assign_wrapped:
+            # Debug: ตรวจสอบ type
+            if isinstance(assign_line, list):
+                assign_line = ' '.join(assign_line)
+            img_assign = draw_text_img(assign_line, size=font_size, bold=False)
+            paste_at_position(img_assign, box_left + 10, current_y)
+            current_y += other_line_spacing
+        current_y += 12  # เพิ่มระยะห่างก่อนลายเซ็นมากขึ้น
         
         # ลายเซ็น
         sign_img = Image.open(sign_file)
@@ -1316,53 +1325,15 @@ def stamp_summary():
         paste_at_position(img_date, center_x_frame - img_date.width//2, current_y)
 
         # ส่งไฟล์กลับ
-        # TEST: ทดสอบฟังก์ชัน wrap_text แทน  
-        def test_wrap_only():
-            debug_info = []
-            text = test_text
+        print("[DEBUG] Saving final PDF...")
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as outpdf:
+            doc.save(outpdf.name)
+            doc.close()
+            print(f"[DEBUG] PDF saved, sending response...")
             
-            # ตัวอักษรไทยที่ไม่ควรนับ (vowel marks, tone marks)
-            thai_marks = set([
-                '\u0E31', '\u0E34', '\u0E35', '\u0E36', '\u0E37', '\u0E38', '\u0E39', '\u0E3A',
-                '\u0E47', '\u0E48', '\u0E49', '\u0E4A', '\u0E4B', '\u0E4C', '\u0E4D', '\u0E4E'
-            ])
-            
-            def count_visible_chars(s):
-                count = len([c for c in s if c not in thai_marks])
-                debug_info.append(f"count_visible_chars('{s[:20]}...') = {count}")
-                return count
-            
-            lines = []
-            max_chars = 30
-            
-            visible_count = count_visible_chars(text)
-            debug_info.append(f"Text length: {len(text)}, visible_chars: {visible_count}, max_chars: {max_chars}")
-            
-            if visible_count > max_chars:
-                debug_info.append("Should enter while loop")
-                # ตัดแบบง่ายๆ
-                while len(text) > 30:
-                    lines.append(text[:30])
-                    text = text[30:]
-                    debug_info.append(f"Cut at 30 chars, remaining: {len(text)}")
-                    
-                if text:
-                    lines.append(text)
-            else:
-                debug_info.append("No cutting needed")
-                lines.append(text)
-            
-            return lines, debug_info
-        
-        test_result, debug_logs = test_wrap_only()
-        return jsonify({
-            'debug': 'wrap_text test',
-            'input': test_text,
-            'input_length': len(test_text),
-            'result': test_result,
-            'num_lines': len(test_result),
-            'debug_logs': debug_logs
-        })
+            response = send_file(outpdf.name, mimetype="application/pdf", as_attachment=True, download_name="summary_stamped.pdf")
+            response.headers['X-Debug'] = 'stamp_summary_processed'
+            return response
 
     except Exception as e:
         print(f"[ERROR] {str(e)}")
