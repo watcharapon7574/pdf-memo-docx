@@ -1082,8 +1082,6 @@ def stamp_summary():
             img = draw_text_image(to_thai_digits(text), fp, size, color_rgb, scale=1)
             return img
 
-        # TEST: ทดสอบฟังก์ชัน wrap_text
-        test_text = "การจัดอบรมดีไซน์การพัฒนาหลักสูตรการจัดอบรมดีไซน์การพัฒนาหลักสูตร"
         
         # ฟังก์ชันตัดข้อความแบบง่าย - 30 ตัวอักษรต่อบรรทัด (ไม่นับ vowel/tone marks)
         def wrap_text(text, max_chars_approx):
