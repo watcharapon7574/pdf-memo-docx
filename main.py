@@ -1284,39 +1284,54 @@ def stamp_summary():
         current_y += first_line_spacing  # ใช้ระยะห่างบรรทัดแรก
         
         # บรรทัดที่ 2: "เรื่อง" (ตัวหนา) + summary
-        subject_text = f"เรื่อง {summary}"
-        wrapped_lines = wrap_text(subject_text, 30)
-        for i, wrapped_line in enumerate(wrapped_lines):
-            # Debug: ตรวจสอบ type
-            if isinstance(wrapped_line, list):
-                wrapped_line = ' '.join(wrapped_line)
-            
-            # บรรทัดแรกที่มี "เรื่อง" ให้เป็นตัวหนา
-            if i == 0 and wrapped_line.startswith("เรื่อง"):
-                img_summary = draw_text_img(wrapped_line, size=font_size, bold=True)
-            else:
+        # วาดคำ "เรื่อง" แยกเป็นตัวหนา
+        subject_bold = draw_text_img("เรื่อง", size=font_size, bold=True)
+        paste_at_position(subject_bold, box_left + 10, current_y)
+        
+        # วาดข้อความ summary ต่อข้างหลัง (ปกติ)
+        subject_normal = draw_text_img(f" {summary}", size=font_size, bold=False)
+        paste_at_position(subject_normal, box_left + 10 + subject_bold.width, current_y)
+        
+        # ถ้าข้อความยาวเกิน ให้ตัดและขึ้นบรรทัดใหม่
+        full_subject_width = subject_bold.width + subject_normal.width
+        box_width = 380  # ความกว้างของกรอบ
+        if full_subject_width > (box_width - 20):  # เหลือพื้นที่ 20px ซ้าย-ขวา
+            current_y += other_line_spacing
+            # ตัดข้อความ summary และแสดงในบรรทัดถัดไป
+            wrapped_lines = wrap_text(summary, 30)
+            for wrapped_line in wrapped_lines:
+                if isinstance(wrapped_line, list):
+                    wrapped_line = ' '.join(wrapped_line)
                 img_summary = draw_text_img(wrapped_line, size=font_size, bold=False)
-            
-            paste_at_position(img_summary, box_left + 10, current_y)
+                paste_at_position(img_summary, box_left + 10, current_y)
+                current_y += other_line_spacing
+        else:
             current_y += other_line_spacing
         
         current_y += 2  # เว้นบรรทัดเล็กน้อย
         
         # บรรทัดมอบหมาย - "เห็นควรมอบ" เป็นตัวหนา
-        assign_text = f"เห็นควรมอบ {group_name}"
-        assign_wrapped = wrap_text(assign_text, 30)
-        for i, assign_line in enumerate(assign_wrapped):
-            # Debug: ตรวจสอบ type
-            if isinstance(assign_line, list):
-                assign_line = ' '.join(assign_line)
-            
-            # บรรทัดแรกที่มี "เห็นควรมอบ" ให้เป็นตัวหนา
-            if i == 0 and assign_line.startswith("เห็นควรมอบ"):
-                img_assign = draw_text_img(assign_line, size=font_size, bold=True)
-            else:
-                img_assign = draw_text_img(assign_line, size=font_size, bold=False)
-            
-            paste_at_position(img_assign, box_left + 10, current_y)
+        # วาดคำ "เห็นควรมอบ" แยกเป็นตัวหนา
+        assign_bold = draw_text_img("เห็นควรมอบ", size=font_size, bold=True)
+        paste_at_position(assign_bold, box_left + 10, current_y)
+        
+        # วาดข้อความ group_name ต่อข้างหลัง (ปกติ)
+        assign_normal = draw_text_img(f" {group_name}", size=font_size, bold=False)
+        paste_at_position(assign_normal, box_left + 10 + assign_bold.width, current_y)
+        
+        # ถ้าข้อความยาวเกิน ให้ตัดและขึ้นบรรทัดใหม่
+        full_assign_width = assign_bold.width + assign_normal.width
+        if full_assign_width > (box_width - 20):  # เหลือพื้นที่ 20px ซ้าย-ขวา
+            current_y += other_line_spacing
+            # ตัดข้อความ group_name และแสดงในบรรทัดถัดไป
+            wrapped_lines = wrap_text(group_name, 30)
+            for wrapped_line in wrapped_lines:
+                if isinstance(wrapped_line, list):
+                    wrapped_line = ' '.join(wrapped_line)
+                img_assign = draw_text_img(wrapped_line, size=font_size, bold=False)
+                paste_at_position(img_assign, box_left + 10, current_y)
+                current_y += other_line_spacing
+        else:
             current_y += other_line_spacing
         current_y += 12  # เพิ่มระยะห่างก่อนลายเซ็นมากขึ้น
         
