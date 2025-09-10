@@ -1213,14 +1213,15 @@ def stamp_summary():
         header_wrapped = wrap_text(header_text, 30)
         total_lines = len(header_wrapped)
         
-        # นับบรรทัดสำหรับ "เรื่อง" + summary
-        subject_text = f"เรื่อง {summary}"
-        subject_wrapped = wrap_text(subject_text, 30)
-        total_lines += len(subject_wrapped)
+        # นับบรรทัดสำหรับ "เรื่อง" (1 บรรทัด) + summary (แยกตัด)
+        total_lines += 1  # บรรทัด "เรื่อง"
+        summary_wrapped = wrap_text(summary, 30)
+        total_lines += len(summary_wrapped)
         
-        # นับบรรทัดมอบหมาย
-        assign_wrapped = wrap_text(assign_text, 30)
-        total_lines += len(assign_wrapped)
+        # นับบรรทัดมอบหมาย "เห็นควรมอบ" (1 บรรทัด) + group_name (แยกตัด)
+        total_lines += 1  # บรรทัด "เห็นควรมอบ"
+        group_wrapped = wrap_text(group_name, 30)
+        total_lines += len(group_wrapped)
         
         total_lines += 1  # บรรทัด "ลงชื่อ + ลายเซ็น"
         total_lines += 1  # บรรทัด "ผู้รับ..."
@@ -1288,24 +1289,14 @@ def stamp_summary():
         subject_bold = draw_text_img("เรื่อง", size=font_size, bold=True)
         paste_at_position(subject_bold, box_left + 10, current_y)
         
-        # วาดข้อความ summary ต่อข้างหลัง (ปกติ)
-        subject_normal = draw_text_img(f" {summary}", size=font_size, bold=False)
-        paste_at_position(subject_normal, box_left + 10 + subject_bold.width, current_y)
-        
-        # ถ้าข้อความยาวเกิน ให้ตัดและขึ้นบรรทัดใหม่
-        full_subject_width = subject_bold.width + subject_normal.width
-        box_width = 380  # ความกว้างของกรอบ
-        if full_subject_width > (box_width - 20):  # เหลือพื้นที่ 20px ซ้าย-ขวา
-            current_y += other_line_spacing
-            # ตัดข้อความ summary และแสดงในบรรทัดถัดไป
-            wrapped_lines = wrap_text(summary, 30)
-            for wrapped_line in wrapped_lines:
-                if isinstance(wrapped_line, list):
-                    wrapped_line = ' '.join(wrapped_line)
-                img_summary = draw_text_img(wrapped_line, size=font_size, bold=False)
-                paste_at_position(img_summary, box_left + 10, current_y)
-                current_y += other_line_spacing
-        else:
+        # ตัดข้อความ summary และแสดงในบรรทัดถัดไป
+        current_y += other_line_spacing
+        wrapped_lines = wrap_text(summary, 30)
+        for wrapped_line in wrapped_lines:
+            if isinstance(wrapped_line, list):
+                wrapped_line = ' '.join(wrapped_line)
+            img_summary = draw_text_img(wrapped_line, size=font_size, bold=False)
+            paste_at_position(img_summary, box_left + 10, current_y)
             current_y += other_line_spacing
         
         current_y += 2  # เว้นบรรทัดเล็กน้อย
@@ -1315,23 +1306,14 @@ def stamp_summary():
         assign_bold = draw_text_img("เห็นควรมอบ", size=font_size, bold=True)
         paste_at_position(assign_bold, box_left + 10, current_y)
         
-        # วาดข้อความ group_name ต่อข้างหลัง (ปกติ)
-        assign_normal = draw_text_img(f" {group_name}", size=font_size, bold=False)
-        paste_at_position(assign_normal, box_left + 10 + assign_bold.width, current_y)
-        
-        # ถ้าข้อความยาวเกิน ให้ตัดและขึ้นบรรทัดใหม่
-        full_assign_width = assign_bold.width + assign_normal.width
-        if full_assign_width > (box_width - 20):  # เหลือพื้นที่ 20px ซ้าย-ขวา
-            current_y += other_line_spacing
-            # ตัดข้อความ group_name และแสดงในบรรทัดถัดไป
-            wrapped_lines = wrap_text(group_name, 30)
-            for wrapped_line in wrapped_lines:
-                if isinstance(wrapped_line, list):
-                    wrapped_line = ' '.join(wrapped_line)
-                img_assign = draw_text_img(wrapped_line, size=font_size, bold=False)
-                paste_at_position(img_assign, box_left + 10, current_y)
-                current_y += other_line_spacing
-        else:
+        # ตัดข้อความ group_name และแสดงในบรรทัดถัดไป
+        current_y += other_line_spacing
+        wrapped_lines = wrap_text(group_name, 30)
+        for wrapped_line in wrapped_lines:
+            if isinstance(wrapped_line, list):
+                wrapped_line = ' '.join(wrapped_line)
+            img_assign = draw_text_img(wrapped_line, size=font_size, bold=False)
+            paste_at_position(img_assign, box_left + 10, current_y)
             current_y += other_line_spacing
         current_y += 12  # เพิ่มระยะห่างก่อนลายเซ็นมากขึ้น
         
