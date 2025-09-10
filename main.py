@@ -1093,31 +1093,31 @@ def stamp_summary():
             if len(text) <= max_chars:
                 return [text]
             
-            # ถ้าขึ้นต้นด้วย "เรื่อง" ให้พยายามรักษาไว้ในบรรทัดเดียวกัน (ปรับปรุง)
+            # ถ้าขึ้นต้นด้วย "เรื่อง" ให้พยายามรักษาไว้ในบรรทัดเดียวกัน (ปรับปรุงใหม่)
             if text.startswith("เรื่อง "):
-                # ลองใส่ "เรื่อง" กับคำแรกในบรรทัดเดียวกัน
                 words = text.split(' ')
-                if len(words) >= 2:  # มีคำอย่างน้อย 2 คำ (เรื่อง + คำแรก)
-                    first_attempt = f"เรื่อง {words[1]}"
-                    if len(first_attempt) <= max_chars:
-                        # เริ่มด้วย "เรื่อง คำแรก" แล้วเพิ่มคำต่อไป
-                        lines = []
-                        current_line = first_attempt
-                        
-                        for word in words[2:]:  # ข้าม "เรื่อง" และคำแรก
-                            test_line = current_line + " " + word
-                            if len(test_line) <= max_chars:
-                                current_line = test_line
-                            else:
+                if len(words) >= 2:
+                    # ลองใส่คำให้มากที่สุดในบรรทัดแรก
+                    lines = []
+                    current_line = "เรื่อง"
+                    
+                    for word in words[1:]:
+                        test_line = current_line + " " + word
+                        # ตรวจสอบความยาวจริงด้วยการวัดจากฟอนต์
+                        test_img = draw_text_img(test_line, size=16, bold=False)
+                        if test_img.width <= (stamp_width - 20):  # เช็คความกว้างจริง
+                            current_line = test_line
+                        else:
+                            if current_line != "เรื่อง":  # ถ้ามีคำติดมาแล้ว
                                 lines.append(current_line)
                                 current_line = word
-                        
-                        if current_line:
-                            lines.append(current_line)
-                        return lines
-                
-                # ถ้าไม่สามารถรวม "เรื่อง" กับคำแรกได้ ให้ตัดตามปกติ
-                return [text] if len(text) <= max_chars else [text[:max_chars], text[max_chars:]]
+                            else:  # ถ้าคำแรกยาวเกินไป
+                                lines.append("เรื่อง")
+                                current_line = word
+                    
+                    if current_line:
+                        lines.append(current_line)
+                    return lines
             
             # กรณีปกติ - ตัดคำตามช่องว่าง
             words = text.split(' ')
@@ -1162,12 +1162,12 @@ def stamp_summary():
         total_lines += 1  # บรรทัด "ผู้รับ..."
         total_lines += 1  # บรรทัด "วันที่..."
         
-        # คำนวณความสูงรวม (ปรับให้แน่นขึ้น)
+        # คำนวณความสูงรวม (แน่นมากขึ้น)
         padding_top = 8
         padding_bottom = 8
-        signature_space = 20  # ลดพื้นที่ลายเซ็น
-        spacing_before_signature = 8  # ลดระยะห่างก่อนลายเซ็น
-        spacing_after_signature = 12  # ลดระยะห่างหลังลายเซ็น
+        signature_space = 18  # ลดพื้นที่ลายเซ็นอีก
+        spacing_before_signature = 5  # ลดระยะห่างก่อนลายเซ็นอีก
+        spacing_after_signature = 8   # ลดระยะห่างหลังลายเซ็นอีก
         
         # คำนวณความสูงจริงตามจำนวนบรรทัด
         text_height = first_line_spacing + (total_lines - 1) * other_line_spacing
@@ -1179,7 +1179,7 @@ def stamp_summary():
                            spacing_after_signature + 
                            padding_bottom)
         
-        stamp_height = int(calculated_height) + 10  # ใช้ความสูงที่คำนวณได้ + buffer เล็กน้อย
+        stamp_height = int(calculated_height)  # ใช้ความสูงที่คำนวณได้เท่านั้น
         
         # คำนวณตำแหน่งกรอบ
         center_x = margin + stamp_width//2
