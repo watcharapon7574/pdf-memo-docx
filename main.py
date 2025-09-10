@@ -1082,69 +1082,70 @@ def stamp_summary():
             img = draw_text_image(to_thai_digits(text), fp, size, color_rgb, scale=1)
             return img
 
-        # ฟังก์ชันตัดข้อความให้พอดีกรอบ (แบบง่าย แต่แม่นยำ)
+        # ฟังก์ชันตัดข้อความแบบง่าย - 30 ตัวอักษรต่อบรรทัด
         def wrap_text(text, max_chars_approx):
-            available_width = stamp_width - 50  # เพิ่ม padding เป็น 50 เพื่อให้แน่ใจ
+            max_chars = 30  # ตัดที่ 30 ตัวอักษร
             
-            # ถ้าข้อความสั้น ทดสอบความกว้างจริง
-            test_img = draw_text_img(text, size=16, bold=False)
-            print(f"[DEBUG WRAP] Text: '{text}', Text width: {test_img.width}, Available: {available_width}")
-            if test_img.width <= available_width:
-                print(f"[DEBUG WRAP] Text fits in one line")
+            if len(text) <= max_chars:
                 return [text]
             
-            # ถ้าขึ้นต้นด้วย "เรื่อง" ให้พยายามรักษาไว้ในบรรทัดเดียวกัน
+            # ถ้าขึ้นต้นด้วย "เรื่อง" ให้รักษาไว้กับคำถัดไป
             if text.startswith("เรื่อง "):
-                print(f"[DEBUG WRAP] Processing เรื่อง text")
+                # หาตำแหน่งตัดที่ดีที่สุดหลัง "เรื่อง คำแรก"
                 words = text.split(' ')
-                lines = []
-                
-                # บังคับให้ "เรื่อง" อยู่กับคำแรกเสมอ
                 if len(words) >= 2:
-                    current_line = f"เรื่อง {words[1]}"  # เริ่มด้วย "เรื่อง คำแรก"
-                    print(f"[DEBUG WRAP] Starting with: '{current_line}'")
+                    # เริ่มด้วย "เรื่อง คำแรก"
+                    first_part = f"เรื่อง {words[1]}"
+                    remaining = ' '.join(words[2:])
                     
-                    # เพิ่มคำที่เหลือทีละคำ
-                    for i, word in enumerate(words[2:]):
+                    # ตัดส่วนที่เหลือแบบธรรมดา
+                    lines = [first_part]
+                    
+                    # เพิ่มคำต่อไปในบรรทัดแรกให้ได้มากที่สุดโดยไม่เกิน 30 ตัว
+                    current_line = first_part
+                    for word in words[2:]:
                         test_line = current_line + " " + word
-                        test_img = draw_text_img(test_line, size=16, bold=False)
-                        print(f"[DEBUG WRAP] Testing: '{test_line}', width: {test_img.width}")
-                        
-                        if test_img.width <= available_width:
+                        if len(test_line) <= max_chars:
                             current_line = test_line
-                            print(f"[DEBUG WRAP] Fits, continuing...")
                         else:
-                            # ถ้าเกิน ให้เก็บบรรทัดปัจจุบันและเริ่มบรรทัดใหม่
-                            print(f"[DEBUG WRAP] Too wide, breaking line")
-                            lines.append(current_line)
-                            current_line = word
+                            # ถ้าเกิน 30 ตัว ให้ตัดใหม่
+                            lines[0] = current_line
+                            remaining_text = ' '.join(words[words.index(word):])
+                            # ตัดส่วนที่เหลือเป็นชิ้น 30 ตัว
+                            while len(remaining_text) > max_chars:
+                                # หาตำแหน่งช่องว่างใกล้ตัวที่ 30
+                                cut_pos = max_chars
+                                while cut_pos > 0 and remaining_text[cut_pos] != ' ':
+                                    cut_pos -= 1
+                                if cut_pos == 0:  # ไม่เจอช่องว่าง ตัดแบบแข็ง
+                                    cut_pos = max_chars
+                                
+                                lines.append(remaining_text[:cut_pos])
+                                remaining_text = remaining_text[cut_pos:].strip()
+                            
+                            if remaining_text:
+                                lines.append(remaining_text)
+                            return lines
                     
-                    if current_line:
-                        lines.append(current_line)
-                    print(f"[DEBUG WRAP] Final lines: {lines}")
-                    return lines
+                    return [current_line]
                 else:
-                    # ถ้ามีแค่ "เรื่อง" คำเดียว
                     return ["เรื่อง"]
             
-            # กรณีปกติ - ตัดคำตามช่องว่าง
-            words = text.split(' ')
+            # กรณีปกติ - ตัดทุก 30 ตัวอักษร
             lines = []
-            current_line = ""
-            
-            for word in words:
-                test_line = current_line + (" " if current_line else "") + word
-                test_img = draw_text_img(test_line, size=16, bold=False)
+            while len(text) > max_chars:
+                # หาตำแหน่งช่องว่างใกล้ตัวที่ 30
+                cut_pos = max_chars
+                while cut_pos > 0 and text[cut_pos] != ' ':
+                    cut_pos -= 1
+                if cut_pos == 0:  # ไม่เจอช่องว่าง ตัดแบบแข็ง
+                    cut_pos = max_chars
                 
-                if test_img.width <= available_width:
-                    current_line = test_line
-                else:
-                    if current_line:
-                        lines.append(current_line)
-                    current_line = word
+                lines.append(text[:cut_pos])
+                text = text[cut_pos:].strip()
             
-            if current_line:
-                lines.append(current_line)
+            if text:
+                lines.append(text)
             
             return lines
 
@@ -1195,7 +1196,7 @@ def stamp_summary():
         center_x = margin + stamp_width//2
         center_y = page_h - margin - stamp_height//2
         
-        print(f"[DEBUG] Stamp width: {stamp_width}, available width: {stamp_width - 50}")
+        print(f"[DEBUG] Using simple 30-character text wrapping")
         print(f"[DEBUG] Summary text: '{summary}'")
         print(f"[DEBUG] Summary wrapped: {wrap_text(summary, 0)}")
         print(f"[DEBUG] Calculated lines: {total_lines}, height: {calculated_height}, final height: {stamp_height}")
