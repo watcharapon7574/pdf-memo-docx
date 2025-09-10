@@ -1070,7 +1070,6 @@ def stamp_summary():
         
         # ข้อมูลที่จะแสดงในตรา
         header_text = "เรียน ผอ. ศกศ.เขต ๖ จ.ลพบุรี"
-        assign_text = f"เห็นควรมอบ {group_name}"
         signature_text = "ลงชื่อ"
         receiver_text = f"ผู้รับ  {receiver_name}"
         date_text = f"วันที่ {date}"
