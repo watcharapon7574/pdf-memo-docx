@@ -1082,42 +1082,36 @@ def stamp_summary():
             img = draw_text_image(to_thai_digits(text), fp, size, color_rgb, scale=1)
             return img
 
-        # ฟังก์ชันตัดข้อความให้พอดีกรอบ (คำนวณตามความกว้างจริง)
+        # ฟังก์ชันตัดข้อความให้พอดีกรอบ (แบบง่าย แต่แม่นยำ)
         def wrap_text(text, max_chars_approx):
-            # คำนวณความกว้างจริงของข้อความด้วยฟอนต์
-            test_img = draw_text_img("ก", size=16, bold=False)
-            char_width = test_img.width  # ความกว้างโดยประมาณของตัวอักษร 1 ตัว
             available_width = stamp_width - 20  # ความกว้างที่ใช้ได้ (ลบ padding)
-            max_chars = int(available_width / char_width * 0.7)  # คำนวณจำนวนตัวอักษรสูงสุดต่อบรรทัด
             
-            if len(text) <= max_chars:
+            # ถ้าข้อความสั้น ทดสอบความกว้างจริง
+            test_img = draw_text_img(text, size=16, bold=False)
+            if test_img.width <= available_width:
                 return [text]
             
-            # ถ้าขึ้นต้นด้วย "เรื่อง" ให้พยายามรักษาไว้ในบรรทัดเดียวกัน (ปรับปรุงใหม่)
+            # ถ้าขึ้นต้นด้วย "เรื่อง" ให้พยายามรักษาไว้ในบรรทัดเดียวกัน
             if text.startswith("เรื่อง "):
                 words = text.split(' ')
-                if len(words) >= 2:
-                    # ลองใส่คำให้มากที่สุดในบรรทัดแรก
-                    lines = []
-                    current_line = "เรื่อง"
+                lines = []
+                current_line = "เรื่อง"
+                
+                # เพิ่มคำทีละคำจนกว่าจะเกินความกว้าง
+                for word in words[1:]:
+                    test_line = current_line + " " + word
+                    test_img = draw_text_img(test_line, size=16, bold=False)
                     
-                    for word in words[1:]:
-                        test_line = current_line + " " + word
-                        # ตรวจสอบความยาวจริงด้วยการวัดจากฟอนต์
-                        test_img = draw_text_img(test_line, size=16, bold=False)
-                        if test_img.width <= (stamp_width - 20):  # เช็คความกว้างจริง
-                            current_line = test_line
-                        else:
-                            if current_line != "เรื่อง":  # ถ้ามีคำติดมาแล้ว
-                                lines.append(current_line)
-                                current_line = word
-                            else:  # ถ้าคำแรกยาวเกินไป
-                                lines.append("เรื่อง")
-                                current_line = word
-                    
-                    if current_line:
+                    if test_img.width <= available_width:
+                        current_line = test_line
+                    else:
+                        # ถ้าเกิน ให้เก็บบรรทัดปัจจุบันและเริ่มบรรทัดใหม่
                         lines.append(current_line)
-                    return lines
+                        current_line = word
+                
+                if current_line:
+                    lines.append(current_line)
+                return lines
             
             # กรณีปกติ - ตัดคำตามช่องว่าง
             words = text.split(' ')
@@ -1126,7 +1120,9 @@ def stamp_summary():
             
             for word in words:
                 test_line = current_line + (" " if current_line else "") + word
-                if len(test_line) <= max_chars:
+                test_img = draw_text_img(test_line, size=16, bold=False)
+                
+                if test_img.width <= available_width:
                     current_line = test_line
                 else:
                     if current_line:
