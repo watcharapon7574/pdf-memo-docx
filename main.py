@@ -1212,15 +1212,11 @@ def stamp_summary():
         header_wrapped = wrap_text(header_text, 30)
         total_lines = len(header_wrapped)
         
-        # นับบรรทัดสำหรับ "เรื่อง" (1 บรรทัด) + summary (แยกตัด)
-        total_lines += 1  # บรรทัด "เรื่อง"
-        summary_wrapped = wrap_text(summary, 30)
-        total_lines += len(summary_wrapped)
+        # นับบรรทัดสำหรับ "เรื่อง" + summary (ในบรรทัดเดียวกัน)
+        total_lines += 1  # บรรทัด "เรื่อง summary"
         
-        # นับบรรทัดมอบหมาย "เห็นควรมอบ" (1 บรรทัด) + group_name (แยกตัด)
-        total_lines += 1  # บรรทัด "เห็นควรมอบ"
-        group_wrapped = wrap_text(group_name, 30)
-        total_lines += len(group_wrapped)
+        # นับบรรทัดมอบหมาย "เห็นควรมอบ" + group_name (ในบรรทัดเดียวกัน)
+        total_lines += 1  # บรรทัด "เห็นควรมอบ group_name"
         
         total_lines += 1  # บรรทัด "ลงชื่อ + ลายเซ็น"
         total_lines += 1  # บรรทัด "ผู้รับ..."
@@ -1283,37 +1279,27 @@ def stamp_summary():
         paste_at_position(img1, box_left + 10, current_y)
         current_y += first_line_spacing  # ใช้ระยะห่างบรรทัดแรก
         
-        # บรรทัดที่ 2: "เรื่อง" (ตัวหนา) + summary
+        # บรรทัดที่ 2: "เรื่อง" (ตัวหนา) + summary (ในบรรทัดเดียวกัน)
         # วาดคำ "เรื่อง" แยกเป็นตัวหนา
         subject_bold = draw_text_img("เรื่อง", size=font_size, bold=True)
         paste_at_position(subject_bold, box_left + 10, current_y)
         
-        # ตัดข้อความ summary และแสดงในบรรทัดถัดไป
+        # วาดข้อความ summary ต่อข้างหลัง (ปกติ)
+        subject_normal = draw_text_img(f" {summary}", size=font_size, bold=False)
+        paste_at_position(subject_normal, box_left + 10 + subject_bold.width, current_y)
         current_y += other_line_spacing
-        wrapped_lines = wrap_text(summary, 30)
-        for wrapped_line in wrapped_lines:
-            if isinstance(wrapped_line, list):
-                wrapped_line = ' '.join(wrapped_line)
-            img_summary = draw_text_img(wrapped_line, size=font_size, bold=False)
-            paste_at_position(img_summary, box_left + 10, current_y)
-            current_y += other_line_spacing
         
         current_y += 2  # เว้นบรรทัดเล็กน้อย
         
-        # บรรทัดมอบหมาย - "เห็นควรมอบ" เป็นตัวหนา
+        # บรรทัดมอบหมาย - "เห็นควรมอบ" (ตัวหนา) + group_name (ในบรรทัดเดียวกัน)
         # วาดคำ "เห็นควรมอบ" แยกเป็นตัวหนา
         assign_bold = draw_text_img("เห็นควรมอบ", size=font_size, bold=True)
         paste_at_position(assign_bold, box_left + 10, current_y)
         
-        # ตัดข้อความ group_name และแสดงในบรรทัดถัดไป
+        # วาดข้อความ group_name ต่อข้างหลัง (ปกติ)
+        assign_normal = draw_text_img(f" {group_name}", size=font_size, bold=False)
+        paste_at_position(assign_normal, box_left + 10 + assign_bold.width, current_y)
         current_y += other_line_spacing
-        wrapped_lines = wrap_text(group_name, 30)
-        for wrapped_line in wrapped_lines:
-            if isinstance(wrapped_line, list):
-                wrapped_line = ' '.join(wrapped_line)
-            img_assign = draw_text_img(wrapped_line, size=font_size, bold=False)
-            paste_at_position(img_assign, box_left + 10, current_y)
-            current_y += other_line_spacing
         current_y += 12  # เพิ่มระยะห่างก่อนลายเซ็นมากขึ้น
         
         # ลายเซ็น
