@@ -1316,8 +1316,45 @@ def stamp_summary():
         paste_at_position(img_date, center_x_frame - img_date.width//2, current_y)
 
         # ส่งไฟล์กลับ
-        # TEST: ทดสอบฟังก์ชัน wrap_text แทน
-        test_result, debug_logs = wrap_text(test_text, 30)
+        # TEST: ทดสอบฟังก์ชัน wrap_text แทน  
+        def test_wrap_only():
+            debug_info = []
+            text = test_text
+            
+            # ตัวอักษรไทยที่ไม่ควรนับ (vowel marks, tone marks)
+            thai_marks = set([
+                '\u0E31', '\u0E34', '\u0E35', '\u0E36', '\u0E37', '\u0E38', '\u0E39', '\u0E3A',
+                '\u0E47', '\u0E48', '\u0E49', '\u0E4A', '\u0E4B', '\u0E4C', '\u0E4D', '\u0E4E'
+            ])
+            
+            def count_visible_chars(s):
+                count = len([c for c in s if c not in thai_marks])
+                debug_info.append(f"count_visible_chars('{s[:20]}...') = {count}")
+                return count
+            
+            lines = []
+            max_chars = 30
+            
+            visible_count = count_visible_chars(text)
+            debug_info.append(f"Text length: {len(text)}, visible_chars: {visible_count}, max_chars: {max_chars}")
+            
+            if visible_count > max_chars:
+                debug_info.append("Should enter while loop")
+                # ตัดแบบง่ายๆ
+                while len(text) > 30:
+                    lines.append(text[:30])
+                    text = text[30:]
+                    debug_info.append(f"Cut at 30 chars, remaining: {len(text)}")
+                    
+                if text:
+                    lines.append(text)
+            else:
+                debug_info.append("No cutting needed")
+                lines.append(text)
+            
+            return lines, debug_info
+        
+        test_result, debug_logs = test_wrap_only()
         return jsonify({
             'debug': 'wrap_text test',
             'input': test_text,
