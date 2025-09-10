@@ -1067,7 +1067,7 @@ def stamp_summary():
         page_h = page.rect.height
         margin = 30
         stamp_width = 200
-        stamp_height = 120
+        stamp_height = 140  # เพิ่มความสูงจาก 120 เป็น 140
         
         # ตำแหน่งกึ่งกลางตรา = มุมซ้ายล่าง + ขอบ + ครึ่งตรา
         center_x = margin + stamp_width//2
