@@ -1082,9 +1082,11 @@ def stamp_summary():
             img = draw_text_image(to_thai_digits(text), fp, size, color_rgb, scale=1)
             return img
 
+        # TEST: ทดสอบฟังก์ชัน wrap_text
+        test_text = "การจัดอบรมดีไซน์การพัฒนาหลักสูตรการจัดอบรมดีไซน์การพัฒนาหลักสูตร"
+        
         # ฟังก์ชันตัดข้อความแบบง่าย - 30 ตัวอักษรต่อบรรทัด (ไม่นับ vowel/tone marks)
         def wrap_text(text, max_chars_approx):
-            print(f"DEBUG wrap_text: '{text}' max_chars_approx={max_chars_approx}")
             # ตัวอักษรไทยที่ไม่ควรนับ (vowel marks, tone marks)
             thai_marks = set([
                 '\u0E31',  # ั
@@ -1305,15 +1307,15 @@ def stamp_summary():
         paste_at_position(img_date, center_x_frame - img_date.width//2, current_y)
 
         # ส่งไฟล์กลับ
-        print("[DEBUG] Saving final PDF...")
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as outpdf:
-            doc.save(outpdf.name)
-            doc.close()
-            print(f"[DEBUG] PDF saved, sending response...")
-            
-            response = send_file(outpdf.name, mimetype="application/pdf", as_attachment=True, download_name="summary_stamped.pdf")
-            response.headers['X-Debug'] = 'stamp_summary_processed'
-            return response
+        # TEST: ทดสอบฟังก์ชัน wrap_text แทน
+        test_result = wrap_text(test_text, 30)
+        return jsonify({
+            'debug': 'wrap_text test',
+            'input': test_text,
+            'input_length': len(test_text),
+            'result': test_result,
+            'num_lines': len(test_result)
+        })
 
     except Exception as e:
         print(f"[ERROR] {str(e)}")
