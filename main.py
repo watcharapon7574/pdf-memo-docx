@@ -1124,12 +1124,12 @@ def stamp_summary():
         assign_text = f"เห็นควรมอบ {group_name}"
         img_assign = draw_text_img(assign_text, size=font_size, bold=False)
         paste_at_position(img_assign, box_left + 10, current_y)
-        current_y += other_line_spacing + 2
+        current_y += other_line_spacing + 8  # เพิ่มระยะห่างก่อนลายเซ็น
         
         # ลายเซ็น
         sign_img = Image.open(sign_file)
-        # ปรับขนาดลายเซ็น
-        sign_height = 30
+        # ปรับขนาดลายเซ็น (เล็กลง)
+        sign_height = 20  # ลดจาก 30 เป็น 20
         ratio = sign_height / sign_img.height
         sign_width = int(sign_img.width * ratio)
         sign_img = sign_img.resize((sign_width, sign_height), Image.LANCZOS)
@@ -1151,7 +1151,7 @@ def stamp_summary():
         # วางลายเซ็นติดข้าง
         paste_at_position(sign_img, start_x + img_sign_text.width + 5, sign_y)
         
-        current_y += 20
+        current_y += 25  # เพิ่มระยะห่างหลังลายเซ็น
         
         # ผู้รับ (กึ่งกลาง)
         receiver_text = f"ผู้รับ  {receiver_name}"
