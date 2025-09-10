@@ -1142,8 +1142,12 @@ def stamp_summary():
                                 if s[j] == ' ' or s[j] in '.!?,:;':
                                     return s[:j]
                             
-                            # ถ้าไม่เจอจุดแบ่งคำจนจบข้อความ ตัดที่ตำแหน่ง current_pos
-                            return s[:current_pos]
+                            # ถ้าไม่เจอจุดแบ่งคำ ให้หาตำแหน่งย้อนกลับที่ไม่ใช่ Thai mark
+                            cut_pos = current_pos
+                            while cut_pos > 0 and s[cut_pos-1] in thai_marks:
+                                cut_pos -= 1
+                            
+                            return s[:max(cut_pos, current_pos-5)]  # อย่างน้อยตัดไม่เกิน 5 ตัวย้อนกลับ
                 
                 return s
             
@@ -1349,31 +1353,16 @@ def stamp_summary():
         img_date = draw_text_img(date_text, size=font_size, bold=False)
         paste_at_position(img_date, center_x_frame - img_date.width//2, current_y)
 
-        # TEST: ส่ง JSON debug กลับแทน
-        test_text = "การจัดอบรมดีไซน์การพัฒนาหลักสูตรการจัดอบรมดีไซน์การพัฒนาหลักสูตร"
-        debug_logs.clear()  # เคลียร์ debug logs ก่อน
-        test_result = wrap_text(test_text, 30)
-        
-        # ทดสอบการนับตัวอักษร
-        thai_marks = set([
-            '\u0E31', '\u0E34', '\u0E35', '\u0E36', '\u0E37', '\u0E38', '\u0E39', '\u0E3A',
-            '\u0E47', '\u0E48', '\u0E49', '\u0E4A', '\u0E4B', '\u0E4C', '\u0E4D', '\u0E4E'
-        ])
-        
-        visible_chars = len([c for c in test_text if c not in thai_marks])
-        
-        return jsonify({
-            'debug': 'wrap_text test',
-            'input': test_text,
-            'input_length': len(test_text),
-            'visible_chars': visible_chars,
-            'result': test_result,
-            'num_lines': len(test_result),
-            'should_wrap': visible_chars > 30,
-            'first_30_chars': test_text[:30],
-            'remaining': test_text[30:] if len(test_text) > 30 else "",
-            'debug_logs': debug_logs
-        })
+        # ส่งไฟล์กลับ
+        print("[DEBUG] Saving final PDF...")
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as outpdf:
+            doc.save(outpdf.name)
+            doc.close()
+            print(f"[DEBUG] PDF saved, sending response...")
+            
+            response = send_file(outpdf.name, mimetype="application/pdf", as_attachment=True, download_name="summary_stamped.pdf")
+            response.headers['X-Debug'] = 'stamp_summary_processed'
+            return response
 
     except Exception as e:
         print(f"[ERROR] {str(e)}")
