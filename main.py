@@ -1284,19 +1284,11 @@ def stamp_summary():
         subject_bold = draw_text_img("เรื่อง", size=font_size, bold=True)
         paste_at_position(subject_bold, box_left + 10, current_y)
         
-        # วาดข้อความ summary ต่อข้างหลัง (ปกติ) - ใช้ 1 ช่องว่าง
-        # ตรวจสอบความยาวและตัดถ้าจำเป็น
-        max_width = 380 - 20 - subject_bold.width  # ความกว้างกรอบ - padding - ความกว้าง "เรื่อง"
+        # วาดข้อความ summary ต่อข้างหลัง (ปกติ) - ใช้ 1 ช่องว่าง และตัดที่ 25 ตัวอักษร
+        max_chars = 25  # จำกัดจำนวนตัวอักษร
         summary_text = summary
-        
-        # ลองวาดดูก่อนว่ายาวเกินไหม
-        temp_img = draw_text_img(f" {summary_text}", size=font_size, bold=False)
-        if temp_img.width > max_width:
-            # ถ้ายาวเกิน ให้ตัดข้อความ
-            while temp_img.width > max_width and len(summary_text) > 5:
-                summary_text = summary_text[:-1]
-                temp_img = draw_text_img(f" {summary_text}...", size=font_size, bold=False)
-            summary_text = summary_text + "..."
+        if len(summary_text) > max_chars:
+            summary_text = summary_text[:max_chars] + "..."
         
         subject_normal = draw_text_img(f" {summary_text}", size=font_size, bold=False)
         paste_at_position(subject_normal, box_left + 10 + subject_bold.width, current_y)
@@ -1309,19 +1301,11 @@ def stamp_summary():
         assign_bold = draw_text_img("เห็นควรมอบ", size=font_size, bold=True)
         paste_at_position(assign_bold, box_left + 10, current_y)
         
-        # วาดข้อความ group_name ต่อข้างหลัง (ปกติ) - ใช้ 1 ช่องว่าง
-        # ตรวจสอบความยาวและตัดถ้าจำเป็น
-        max_width_assign = 380 - 20 - assign_bold.width  # ความกว้างกรอบ - padding - ความกว้าง "เห็นควรมอบ"
+        # วาดข้อความ group_name ต่อข้างหลัง (ปกติ) - ใช้ 1 ช่องว่าง และตัดที่ 20 ตัวอักษร
+        max_chars_assign = 20  # จำกัดจำนวนตัวอักษร
         group_text = group_name
-        
-        # ลองวาดดูก่อนว่ายาวเกินไหม
-        temp_img_assign = draw_text_img(f" {group_text}", size=font_size, bold=False)
-        if temp_img_assign.width > max_width_assign:
-            # ถ้ายาวเกิน ให้ตัดข้อความ
-            while temp_img_assign.width > max_width_assign and len(group_text) > 5:
-                group_text = group_text[:-1]
-                temp_img_assign = draw_text_img(f" {group_text}...", size=font_size, bold=False)
-            group_text = group_text + "..."
+        if len(group_text) > max_chars_assign:
+            group_text = group_text[:max_chars_assign] + "..."
         
         assign_normal = draw_text_img(f" {group_text}", size=font_size, bold=False)
         paste_at_position(assign_normal, box_left + 10 + assign_bold.width, current_y)
