@@ -1099,30 +1099,32 @@ def stamp_summary():
             page.insert_image(rect, stream=bio.getvalue())
 
         # วาดข้อความในตรา
-        line_spacing = 18
+        font_size = 16
+        first_line_spacing = font_size  # บรรทัดแรก = ขนาดฟอนต์ (16)
+        other_line_spacing = font_size - 4  # บรรทัดอื่น = ขนาดฟอนต์ - 4 (12)
         current_y = box_top + 15  # เริ่มจากด้านบนของกรอบ + padding
         
         # บรรทัดที่ 1: เรียน ผอ. ศกศ.เขต ๖ จ.ลพบุรี
         text1 = "เรียน ผอ. ศกศ.เขต ๖ จ.ลพบุรี"
-        img1 = draw_text_img(text1, size=16, bold=True)
+        img1 = draw_text_img(text1, size=font_size, bold=True)
         paste_at_position(img1, box_left + 10, current_y)
-        current_y += line_spacing
+        current_y += first_line_spacing  # ใช้ระยะห่างบรรทัดแรก
         
         # บรรทัดที่ 2-3: summary (อาจมี 1-2 บรรทัด)
         summary_lines = summary.split('\n')
         for line in summary_lines:
             if line.strip():  # ถ้าไม่ใช่บรรทัดว่าง
-                img_summary = draw_text_img(line, size=16, bold=False)
+                img_summary = draw_text_img(line, size=font_size, bold=False)
                 paste_at_position(img_summary, box_left + 10, current_y)
-            current_y += line_spacing
+            current_y += other_line_spacing  # ใช้ระยะห่างบรรทัดอื่น
         
-        current_y += 5  # เว้นบรรทัด
+        current_y += 2  # เว้นบรรทัดเล็กน้อย
         
         # บรรทัดมอบหมาย
         assign_text = f"เห็นควรมอบ {group_name}"
-        img_assign = draw_text_img(assign_text, size=16, bold=False)
+        img_assign = draw_text_img(assign_text, size=font_size, bold=False)
         paste_at_position(img_assign, box_left + 10, current_y)
-        current_y += line_spacing + 5
+        current_y += other_line_spacing + 2
         
         # ลายเซ็น
         sign_img = Image.open(sign_file)
@@ -1138,20 +1140,20 @@ def stamp_summary():
         
         # ข้อความลงชื่อ
         sign_text = "ลงชื่อ"
-        img_sign_text = draw_text_img(sign_text, size=16, bold=False)
+        img_sign_text = draw_text_img(sign_text, size=font_size, bold=False)
         paste_at_position(img_sign_text, box_left + 10, sign_y)
         
-        current_y += 25
+        current_y += 20
         
         # ผู้รับ
         receiver_text = f"ผู้รับ  {receiver_name}"
-        img_receiver = draw_text_img(receiver_text, size=16, bold=False)
+        img_receiver = draw_text_img(receiver_text, size=font_size, bold=False)
         paste_at_position(img_receiver, box_left + 10, current_y)
-        current_y += line_spacing + 5
+        current_y += other_line_spacing + 2
         
         # วันที่
         date_text = f"วันที่ {date}"
-        img_date = draw_text_img(date_text, size=16, bold=False)
+        img_date = draw_text_img(date_text, size=font_size, bold=False)
         paste_at_position(img_date, box_left + 10, current_y)
 
         # ส่งไฟล์กลับ
