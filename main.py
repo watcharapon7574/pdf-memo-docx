@@ -1018,11 +1018,14 @@ def stamp_summary():
     """
     multipart/form-data:
       - pdf: ไฟล์ PDF ต้นฉบับ
-      - summary: สรุปสั้นใจความ (string, 1-2 บรรทัด)
-      - group_name: ชื่อกลุ่มงานที่มอบหมาย (string)
       - sign_png: ไฟล์ลายเซ็นธุรการ (PNG โปร่งใส)
-      - receiver_name: ชื่อธุรการผู้รับ (string)  
-      - date: วดป แบบที่ป้อนมาได้เลย (เช่น 20 ก.ย. 67)
+      - payload: JSON string:
+        {
+          "summary": "เรื่อง การขออนุมัติโครงการ",
+          "group_name": "กลุ่มวิชาการ", 
+          "receiver_name": "นายสมชาย รับผิดชอบ",
+          "date": "25 ก.ย. 67"
+        }
     
     ตราจะวาดที่มุมซ้ายล่างของกระดาษ
     """
@@ -1033,19 +1036,18 @@ def stamp_summary():
             return jsonify({'error': 'No PDF file uploaded'}), 400
         if 'sign_png' not in request.files:
             return jsonify({'error': 'No signature PNG file uploaded'}), 400
-        
-        required_fields = ['summary', 'group_name', 'receiver_name', 'date']
-        for field in required_fields:
-            if field not in request.form:
-                return jsonify({'error': f'Missing field: {field}'}), 400
+        if 'payload' not in request.form:
+            return jsonify({'error': 'No payload'}), 400
 
         # อ่านข้อมูล
         pdf_file = request.files['pdf']
         sign_file = request.files['sign_png']
-        summary = request.form['summary']
-        group_name = request.form['group_name'] 
-        receiver_name = request.form['receiver_name']
-        date = request.form['date']
+        
+        p = json.loads(request.form['payload'])
+        summary = p.get('summary', '')
+        group_name = p.get('group_name', '') 
+        receiver_name = p.get('receiver_name', '')
+        date = p.get('date', '')
         
         print(f"[DEBUG] Data: summary={summary}, group={group_name}, receiver={receiver_name}, date={date}")
 
