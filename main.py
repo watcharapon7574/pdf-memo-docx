@@ -1066,7 +1066,7 @@ def stamp_summary():
         page_w = page.rect.width
         page_h = page.rect.height
         margin = 30
-        stamp_width = 200
+        stamp_width = 280  # เพิ่มความกว้างเพื่อรองรับข้อความยาว
         stamp_height = 120  # ลดกลับเป็น 120
         
         # ตำแหน่งกึ่งกลางตรา = มุมซ้ายล่าง + ขอบ + ครึ่งตรา
@@ -1158,8 +1158,8 @@ def stamp_summary():
         summary_lines = summary.split('\n')
         for line in summary_lines:
             if line.strip():  # ถ้าไม่ใช่บรรทัดว่าง
-                # ตัดข้อความให้พอดีกรอบ (ประมาณ 25 ตัวอักษร)
-                wrapped_lines = wrap_text(line, 25)
+                # ตัดข้อความให้พอดีกรอบ (เพิ่มเป็น 35 ตัวอักษร)
+                wrapped_lines = wrap_text(line, 35)
                 for wrapped_line in wrapped_lines:
                     img_summary = draw_text_img(wrapped_line, size=font_size, bold=False)
                     paste_at_position(img_summary, box_left + 10, current_y)
