@@ -1087,7 +1087,8 @@ def stamp_summary():
         
         # ฟังก์ชันตัดข้อความแบบง่าย - 30 ตัวอักษรต่อบรรทัด (ไม่นับ vowel/tone marks)
         def wrap_text(text, max_chars_approx):
-            print(f"DEBUG: Input text='{text}', length={len(text)}")
+            debug_info = []
+            debug_info.append(f"Input: '{text}', length={len(text)}")
             # ตัวอักษรไทยที่ไม่ควรนับ (vowel marks, tone marks)
             thai_marks = set([
                 '\u0E31',  # ั
@@ -1111,7 +1112,7 @@ def stamp_summary():
             def count_visible_chars(s):
                 """นับตัวอักษรที่มองเห็นได้ (ไม่รวม marks)"""
                 count = len([c for c in s if c not in thai_marks])
-                print(f"DEBUG: count_visible_chars('{s[:20]}...') = {count}")
+                debug_info.append(f"count_visible_chars('{s[:20]}...') = {count}")
                 return count
             
             def cut_at_visible_chars(s, max_visible):
@@ -1158,19 +1159,21 @@ def stamp_summary():
                         text = rest_text
             
             # ตัดที่ 30 ตัวอักษรที่มองเห็นได้
-            print(f"DEBUG: Before while loop, text length = {count_visible_chars(text)}, max_chars = {max_chars}")
+            visible_count = count_visible_chars(text)
+            debug_info.append(f"Before while: visible_chars={visible_count}, max_chars={max_chars}")
+            
             while count_visible_chars(text) > max_chars:
-                print(f"DEBUG: In while loop, cutting text...")
+                debug_info.append("In while loop, cutting text...")
                 cut_text = cut_at_visible_chars(text, max_chars)
                 lines.append(cut_text)
                 text = text[len(cut_text):]
-                print(f"DEBUG: Added line: '{cut_text[:20]}...', remaining: '{text[:20]}...'")
+                debug_info.append(f"Added line: '{cut_text[:20]}...', remaining: '{text[:20]}...'")
             
             if text.strip():
                 lines.append(text)
             
-            print(f"DEBUG wrap_text result: {lines}")
-            return lines
+            debug_info.append(f"Final result: {len(lines)} lines")
+            return lines, debug_info
 
         # คำนวณจำนวนบรรทัดทั้งหมด
         font_size = 16
@@ -1314,13 +1317,14 @@ def stamp_summary():
 
         # ส่งไฟล์กลับ
         # TEST: ทดสอบฟังก์ชัน wrap_text แทน
-        test_result = wrap_text(test_text, 30)
+        test_result, debug_logs = wrap_text(test_text, 30)
         return jsonify({
             'debug': 'wrap_text test',
             'input': test_text,
             'input_length': len(test_text),
             'result': test_result,
-            'num_lines': len(test_result)
+            'num_lines': len(test_result),
+            'debug_logs': debug_logs
         })
 
     except Exception as e:
