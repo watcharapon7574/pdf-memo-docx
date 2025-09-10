@@ -1062,41 +1062,30 @@ def stamp_summary():
         if not os.path.isfile(font_path) or not os.path.isfile(bold_font_path):
             return jsonify({'error': 'THSarabunNew fonts not found'}), 500
 
-        # คำนวณตำแหน่งมุมซ้ายล่าง
+        # เตรียมข้อมูลสำหรับคำนวณความสูง
         page_w = page.rect.width
         page_h = page.rect.height
         margin = 30
-        stamp_width = 200  # กลับเป็นขนาดเดิม
-        stamp_height = 120  # ลดกลับเป็น 120
+        stamp_width = 200
         
-        # ตำแหน่งกึ่งกลางตรา = มุมซ้ายล่าง + ขอบ + ครึ่งตรา
-        center_x = margin + stamp_width//2
-        center_y = page_h - margin - stamp_height//2
+        # ข้อมูลที่จะแสดงในตรา
+        header_text = "เรียน ผอ. ศกศ.เขต ๖ จ.ลพบุรี"
+        assign_text = f"เห็นควรมอบ {group_name}"
+        signature_text = "ลงชื่อ"
+        receiver_text = f"ผู้รับ  {receiver_name}"
+        date_text = f"วันที่ {date}"
         
-        print(f"[DEBUG] Page size: {page_w}x{page_h}")
-        print(f"[DEBUG] Stamp position: center_x={center_x}, center_y={center_y}")
-
-        # วาดกรอบตรา
-        box_left = center_x - stamp_width//2
-        box_top = center_y - stamp_height//2  
-        box_right = center_x + stamp_width//2
-        box_bottom = center_y + stamp_height//2
-        
-        box_rect = fitz.Rect(box_left, box_top, box_right, box_bottom)
-        box_color = (2/255, 53/255, 139/255)  # สีน้ำเงิน
-        page.draw_rect(box_rect, color=box_color, width=2)
-
-        # สร้างฟังก์ชันวาดข้อความ
+        # สร้างฟังก์ชันวาดข้อความ (ต้องสร้างก่อนเพื่อใช้คำนวณ)
         def draw_text_img(text, size=16, bold=False):
             fp = bold_font_path if bold else font_path
             color_rgb = (2, 53, 139)  # สีน้ำเงิน
             img = draw_text_image(to_thai_digits(text), fp, size, color_rgb, scale=1)
             return img
-        
+
         # ฟังก์ชันตัดข้อความให้พอดีกรอบ (คำนวณตามความกว้างจริง)
         def wrap_text(text, max_chars_approx):
             # คำนวณความกว้างจริงของข้อความด้วยฟอนต์
-            test_img = draw_text_img("ก", size=font_size, bold=False)
+            test_img = draw_text_img("ก", size=16, bold=False)
             char_width = test_img.width  # ความกว้างโดยประมาณของตัวอักษร 1 ตัว
             available_width = stamp_width - 20  # ความกว้างที่ใช้ได้ (ลบ padding)
             max_chars = int(available_width / char_width * 0.7)  # คำนวณจำนวนตัวอักษรสูงสุดต่อบรรทัด
@@ -1140,6 +1129,67 @@ def stamp_summary():
                 lines.append(current_line)
             
             return lines
+
+        # คำนวณจำนวนบรรทัดทั้งหมด
+        font_size = 16
+        first_line_spacing = font_size  # บรรทัดแรก = ขนาดฟอนต์ (16)
+        other_line_spacing = font_size - 4  # บรรทัดอื่น = ขนาดฟอนต์ - 4 (12)
+        
+        # นับบรรทัดหัวข้อ "เรียน..."
+        header_wrapped = wrap_text(header_text, 23)
+        total_lines = len(header_wrapped)
+        
+        # นับบรรทัดสำหรับ summary
+        summary_lines = summary.split('\n')
+        for line in summary_lines:
+            if line.strip():
+                wrapped_lines = wrap_text(line, 23)
+                total_lines += len(wrapped_lines)
+        
+        # นับบรรทัดมอบหมาย
+        assign_wrapped = wrap_text(assign_text, 23)
+        total_lines += len(assign_wrapped)
+        
+        total_lines += 1  # บรรทัด "ลงชื่อ + ลายเซ็น"
+        total_lines += 1  # บรรทัด "ผู้รับ..."
+        total_lines += 1  # บรรทัด "วันที่..."
+        
+        # คำนวณความสูงรวม
+        padding_top = 8
+        padding_bottom = 8
+        signature_space = 30  # พื้นที่สำหรับลายเซ็น
+        spacing_before_signature = 12
+        spacing_after_signature = 18
+        spacing_between_lines = 2
+        
+        calculated_height = (padding_top + 
+                           first_line_spacing + 
+                           (total_lines - 2) * other_line_spacing +  # บรรทัดอื่นๆ ยกเว้นหัวข้อและลายเซ็น
+                           spacing_before_signature + 
+                           signature_space + 
+                           spacing_after_signature + 
+                           spacing_between_lines * 2 +  # ระยะห่างเพิ่มเติม
+                           padding_bottom)
+        
+        stamp_height = max(120, calculated_height)  # ใช้ความสูงที่คำนวณได้ แต่ไม่น้อยกว่า 120
+        
+        # คำนวณตำแหน่งกรอบ
+        center_x = margin + stamp_width//2
+        center_y = page_h - margin - stamp_height//2
+        
+        print(f"[DEBUG] Calculated lines: {total_lines}, height: {calculated_height}, final height: {stamp_height}")
+        print(f"[DEBUG] Page size: {page_w}x{page_h}")
+        print(f"[DEBUG] Stamp position: center_x={center_x}, center_y={center_y}")
+
+        # วาดกรอบตรา
+        box_left = center_x - stamp_width//2
+        box_top = center_y - stamp_height//2  
+        box_right = center_x + stamp_width//2
+        box_bottom = center_y + stamp_height//2
+        
+        box_rect = fitz.Rect(box_left, box_top, box_right, box_bottom)
+        box_color = (2/255, 53/255, 139/255)  # สีน้ำเงิน
+        page.draw_rect(box_rect, color=box_color, width=2)
 
         def paste_at_position(img, x, y):
             rect = fitz.Rect(x, y, x+img.width, y+img.height)
