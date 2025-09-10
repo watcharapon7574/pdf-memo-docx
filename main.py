@@ -1084,6 +1084,7 @@ def stamp_summary():
 
         # ฟังก์ชันตัดข้อความแบบง่าย - 30 ตัวอักษรต่อบรรทัด (ไม่นับ vowel/tone marks)
         def wrap_text(text, max_chars_approx):
+            print(f"DEBUG wrap_text: '{text}' max_chars_approx={max_chars_approx}")
             # ตัวอักษรไทยที่ไม่ควรนับ (vowel marks, tone marks)
             thai_marks = set([
                 '\u0E31',  # ั
@@ -1160,6 +1161,7 @@ def stamp_summary():
             if text.strip():
                 lines.append(text)
             
+            print(f"DEBUG wrap_text result: {lines}")
             return lines
 
         # คำนวณจำนวนบรรทัดทั้งหมด
