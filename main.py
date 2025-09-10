@@ -1093,11 +1093,30 @@ def stamp_summary():
             img = draw_text_image(to_thai_digits(text), fp, size, color_rgb, scale=1)
             return img
         
-        # ฟังก์ชันตัดข้อความให้พอดีกรอบ
+        # ฟังก์ชันตัดข้อความให้พอดีกรอบ (ไม่แยกคำ "เรื่อง")
         def wrap_text(text, max_width):
             if len(text) <= max_width:
                 return [text]
             
+            # ถ้าขึ้นต้นด้วย "เรื่อง" ไม่ให้แยกออกจากเนื้อหา
+            if text.startswith("เรื่อง "):
+                # ลองหาจุดตัดที่เหมาะสม
+                words = text.split(' ')
+                lines = []
+                current_line = "เรื่อง"  # เริ่มด้วยเรื่อง
+                
+                for word in words[1:]:  # ข้าม "เรื่อง" ที่อยู่ตำแหน่งแรก
+                    if len(current_line + " " + word) <= max_width:
+                        current_line += " " + word
+                    else:
+                        lines.append(current_line)
+                        current_line = word
+                
+                if current_line:
+                    lines.append(current_line)
+                return lines
+            
+            # กรณีปกติ
             words = text.split(' ')
             lines = []
             current_line = ""
@@ -1154,7 +1173,7 @@ def stamp_summary():
         assign_text = f"เห็นควรมอบ {group_name}"
         img_assign = draw_text_img(assign_text, size=font_size, bold=False)
         paste_at_position(img_assign, box_left + 10, current_y)
-        current_y += other_line_spacing + 8  # เพิ่มระยะห่างก่อนลายเซ็นเล็กน้อย
+        current_y += other_line_spacing + 12  # เพิ่มระยะห่างก่อนลายเซ็นมากขึ้น
         
         # ลายเซ็น
         sign_img = Image.open(sign_file)
@@ -1181,7 +1200,7 @@ def stamp_summary():
         # วางลายเซ็นติดข้าง
         paste_at_position(sign_img, start_x + img_sign_text.width + 5, sign_y)
         
-        current_y += 15  # ลดระยะห่างหลังลายเซ็น
+        current_y += 18  # เพิ่มระยะห่างหลังลายเซ็น
         
         # ผู้รับ (กึ่งกลาง)
         receiver_text = f"ผู้รับ  {receiver_name}"
