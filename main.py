@@ -1102,7 +1102,7 @@ def stamp_summary():
         font_size = 16
         first_line_spacing = font_size  # บรรทัดแรก = ขนาดฟอนต์ (16)
         other_line_spacing = font_size - 4  # บรรทัดอื่น = ขนาดฟอนต์ - 4 (12)
-        current_y = box_top + 15  # เริ่มจากด้านบนของกรอบ + padding
+        current_y = box_top + 8  # เริ่มใกล้ขอบบนของกรอบมากขึ้น
         
         # บรรทัดที่ 1: เรียน ผอ. ศกศ.เขต ๖ จ.ลพบุรี
         text1 = "เรียน ผอ. ศกศ.เขต ๖ จ.ลพบุรี"
@@ -1124,7 +1124,7 @@ def stamp_summary():
         assign_text = f"เห็นควรมอบ {group_name}"
         img_assign = draw_text_img(assign_text, size=font_size, bold=False)
         paste_at_position(img_assign, box_left + 10, current_y)
-        current_y += other_line_spacing + 15  # เพิ่มระยะห่างก่อนลายเซ็นมากขึ้น
+        current_y += other_line_spacing + 5  # ลดระยะห่างก่อนลายเซ็น
         
         # ลายเซ็น
         sign_img = Image.open(sign_file)
@@ -1151,13 +1151,13 @@ def stamp_summary():
         # วางลายเซ็นติดข้าง
         paste_at_position(sign_img, start_x + img_sign_text.width + 5, sign_y)
         
-        current_y += 25  # เพิ่มระยะห่างหลังลายเซ็น
+        current_y += 15  # ลดระยะห่างหลังลายเซ็น
         
         # ผู้รับ (กึ่งกลาง)
         receiver_text = f"ผู้รับ  {receiver_name}"
         img_receiver = draw_text_img(receiver_text, size=font_size, bold=False)
         paste_at_position(img_receiver, center_x_frame - img_receiver.width//2, current_y)
-        current_y += other_line_spacing + 2
+        current_y += other_line_spacing
         
         # วันที่ (กึ่งกลาง)
         date_text = f"วันที่ {date}"
