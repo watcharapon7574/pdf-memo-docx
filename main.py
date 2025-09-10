@@ -1084,67 +1084,30 @@ def stamp_summary():
 
         # ฟังก์ชันตัดข้อความแบบง่าย - 30 ตัวอักษรต่อบรรทัด
         def wrap_text(text, max_chars_approx):
-            max_chars = 30  # ตัดที่ 30 ตัวอักษร
+            lines = []
+            max_chars = 30
             
-            if len(text) <= max_chars:
-                return [text]
-            
-            # ถ้าขึ้นต้นด้วย "เรื่อง" ให้รักษาไว้กับคำถัดไป
+            # ถ้าขึ้นต้นด้วย "เรื่อง " ให้รักษาไว้กับคำถัดไป
             if text.startswith("เรื่อง "):
-                # หาตำแหน่งตัดที่ดีที่สุดหลัง "เรื่อง คำแรก"
                 words = text.split(' ')
                 if len(words) >= 2:
-                    # เริ่มด้วย "เรื่อง คำแรก"
-                    first_part = f"เรื่อง {words[1]}"
-                    remaining = ' '.join(words[2:])
+                    first_group = f"เรื่อง {words[1]}"
+                    rest_text = ' '.join(words[2:])
                     
-                    # ตัดส่วนที่เหลือแบบธรรมดา
-                    lines = [first_part]
-                    
-                    # เพิ่มคำต่อไปในบรรทัดแรกให้ได้มากที่สุดโดยไม่เกิน 30 ตัว
-                    current_line = first_part
-                    for word in words[2:]:
-                        test_line = current_line + " " + word
-                        if len(test_line) <= max_chars:
-                            current_line = test_line
-                        else:
-                            # ถ้าเกิน 30 ตัว ให้ตัดใหม่
-                            lines[0] = current_line
-                            remaining_text = ' '.join(words[words.index(word):])
-                            # ตัดส่วนที่เหลือเป็นชิ้น 30 ตัว
-                            while len(remaining_text) > max_chars:
-                                # หาตำแหน่งช่องว่างใกล้ตัวที่ 30
-                                cut_pos = max_chars
-                                while cut_pos > 0 and remaining_text[cut_pos] != ' ':
-                                    cut_pos -= 1
-                                if cut_pos == 0:  # ไม่เจอช่องว่าง ตัดแบบแข็ง
-                                    cut_pos = max_chars
-                                
-                                lines.append(remaining_text[:cut_pos])
-                                remaining_text = remaining_text[cut_pos:].strip()
-                            
-                            if remaining_text:
-                                lines.append(remaining_text)
-                            return lines
-                    
-                    return [current_line]
-                else:
-                    return ["เรื่อง"]
+                    # ถ้า first_group เกิน 30 ตัว ก็ตัดแบบธรรมดา
+                    if len(first_group) > max_chars:
+                        text = text  # ใช้วิธีตัดธรรมดา
+                    else:
+                        # ใส่ first_group ในบรรทัดแรก
+                        lines.append(first_group)
+                        text = rest_text
             
-            # กรณีปกติ - ตัดทุก 30 ตัวอักษร
-            lines = []
+            # ตัดที่ 30 ตัวอักษรแบบธรรมดา
             while len(text) > max_chars:
-                # หาตำแหน่งช่องว่างใกล้ตัวที่ 30
-                cut_pos = max_chars
-                while cut_pos > 0 and text[cut_pos] != ' ':
-                    cut_pos -= 1
-                if cut_pos == 0:  # ไม่เจอช่องว่าง ตัดแบบแข็ง
-                    cut_pos = max_chars
-                
-                lines.append(text[:cut_pos])
-                text = text[cut_pos:].strip()
+                lines.append(text[:max_chars])
+                text = text[max_chars:]
             
-            if text:
+            if text.strip():
                 lines.append(text)
             
             return lines
