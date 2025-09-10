@@ -1066,7 +1066,7 @@ def stamp_summary():
         page_w = page.rect.width
         page_h = page.rect.height
         margin = 30
-        stamp_width = 280  # เพิ่มความกว้างเพื่อรองรับข้อความยาว
+        stamp_width = 200  # กลับเป็นขนาดเดิม
         stamp_height = 120  # ลดกลับเป็น 120
         
         # ตำแหน่งกึ่งกลางตรา = มุมซ้ายล่าง + ขอบ + ครึ่งตรา
@@ -1093,21 +1093,27 @@ def stamp_summary():
             img = draw_text_image(to_thai_digits(text), fp, size, color_rgb, scale=1)
             return img
         
-        # ฟังก์ชันตัดข้อความให้พอดีกรอบ (ไม่แยกคำ "เรื่อง")
-        def wrap_text(text, max_width):
-            if len(text) <= max_width:
+        # ฟังก์ชันตัดข้อความให้พอดีกรอบ (คำนวณตามความกว้างจริง)
+        def wrap_text(text, max_chars_approx):
+            # คำนวณความกว้างจริงของข้อความด้วยฟอนต์
+            test_img = draw_text_img("ก", size=font_size, bold=False)
+            char_width = test_img.width  # ความกว้างโดยประมาณของตัวอักษร 1 ตัว
+            available_width = stamp_width - 20  # ความกว้างที่ใช้ได้ (ลบ padding)
+            max_chars = int(available_width / char_width * 0.7)  # คำนวณจำนวนตัวอักษรสูงสุดต่อบรรทัด
+            
+            if len(text) <= max_chars:
                 return [text]
             
-            # ถ้าขึ้นต้นด้วย "เรื่อง" ไม่ให้แยกออกจากเนื้อหา
+            # ถ้าขึ้นต้นด้วย "เรื่อง" ให้พยายามรักษาไว้ในบรรทัดเดียวกัน
             if text.startswith("เรื่อง "):
-                # ลองหาจุดตัดที่เหมาะสม
                 words = text.split(' ')
                 lines = []
-                current_line = "เรื่อง"  # เริ่มด้วยเรื่อง
+                current_line = "เรื่อง"
                 
-                for word in words[1:]:  # ข้าม "เรื่อง" ที่อยู่ตำแหน่งแรก
-                    if len(current_line + " " + word) <= max_width:
-                        current_line += " " + word
+                for word in words[1:]:
+                    test_line = current_line + " " + word
+                    if len(test_line) <= max_chars:
+                        current_line = test_line
                     else:
                         lines.append(current_line)
                         current_line = word
@@ -1116,17 +1122,15 @@ def stamp_summary():
                     lines.append(current_line)
                 return lines
             
-            # กรณีปกติ
+            # กรณีปกติ - ตัดคำตามช่องว่าง
             words = text.split(' ')
             lines = []
             current_line = ""
             
             for word in words:
-                if len(current_line + " " + word) <= max_width:
-                    if current_line:
-                        current_line += " " + word
-                    else:
-                        current_line = word
+                test_line = current_line + (" " if current_line else "") + word
+                if len(test_line) <= max_chars:
+                    current_line = test_line
                 else:
                     if current_line:
                         lines.append(current_line)
@@ -1158,8 +1162,8 @@ def stamp_summary():
         summary_lines = summary.split('\n')
         for line in summary_lines:
             if line.strip():  # ถ้าไม่ใช่บรรทัดว่าง
-                # ตัดข้อความให้พอดีกรอบ (เพิ่มเป็น 35 ตัวอักษร)
-                wrapped_lines = wrap_text(line, 35)
+                # ตัดข้อความให้พอดีกรอบ (ประมาณ 23 ตัวอักษรตามความกว้างกรอบ)
+                wrapped_lines = wrap_text(line, 23)
                 for wrapped_line in wrapped_lines:
                     img_summary = draw_text_img(wrapped_line, size=font_size, bold=False)
                     paste_at_position(img_summary, box_left + 10, current_y)
