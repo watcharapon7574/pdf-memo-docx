@@ -1134,27 +1134,30 @@ def stamp_summary():
         sign_width = int(sign_img.width * ratio)
         sign_img = sign_img.resize((sign_width, sign_height), Image.LANCZOS)
         
-        # วางลายเซ็น
-        sign_y = current_y
-        paste_at_position(sign_img, box_left + 60, sign_y)
+        # คำนวณตำแหน่งกึ่งกลางของกรอบ
+        center_x_frame = box_left + stamp_width//2
         
-        # ข้อความลงชื่อ
+        # วางลายเซ็น (กึ่งกลาง)
+        sign_y = current_y
+        paste_at_position(sign_img, center_x_frame - sign_width//2, sign_y)
+        
+        # ข้อความลงชื่อ (กึ่งกลาง)
         sign_text = "ลงชื่อ"
         img_sign_text = draw_text_img(sign_text, size=font_size, bold=False)
-        paste_at_position(img_sign_text, box_left + 10, sign_y)
+        paste_at_position(img_sign_text, center_x_frame - img_sign_text.width//2, sign_y)
         
         current_y += 20
         
-        # ผู้รับ
+        # ผู้รับ (กึ่งกลาง)
         receiver_text = f"ผู้รับ  {receiver_name}"
         img_receiver = draw_text_img(receiver_text, size=font_size, bold=False)
-        paste_at_position(img_receiver, box_left + 10, current_y)
+        paste_at_position(img_receiver, center_x_frame - img_receiver.width//2, current_y)
         current_y += other_line_spacing + 2
         
-        # วันที่
+        # วันที่ (กึ่งกลาง)
         date_text = f"วันที่ {date}"
         img_date = draw_text_img(date_text, size=font_size, bold=False)
-        paste_at_position(img_date, box_left + 10, current_y)
+        paste_at_position(img_date, center_x_frame - img_date.width//2, current_y)
 
         # ส่งไฟล์กลับ
         print("[DEBUG] Saving final PDF...")
