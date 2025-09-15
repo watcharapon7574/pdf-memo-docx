@@ -1285,9 +1285,7 @@ def stamp_summary():
         
         # บรรทัดที่ 2: "เรื่อง" + summary (ใช้การตัดแบบเดิม 30 ตัวอักษร)
         subject_text = f"เรื่อง {summary}"
-        print(f"DEBUG subject_text: '{subject_text}'")
         wrapped_lines = wrap_text(subject_text, 30)
-        print(f"DEBUG wrapped_lines: {wrapped_lines}")
         for i, wrapped_line in enumerate(wrapped_lines):
             # Debug: ตรวจสอบ type
             if isinstance(wrapped_line, list):
@@ -1376,14 +1374,16 @@ def stamp_summary():
         img_date = draw_text_img(date_text, size=font_size, bold=False)
         paste_at_position(img_date, center_x_frame - img_date.width//2, current_y)
 
-        # DEBUG: ส่ง JSON แทน PDF เพื่อดูผลลัพธ์การตัด
-        return jsonify({
-            'debug': 'text wrapping test',
-            'subject_input': subject_text,
-            'subject_wrapped': wrapped_lines,
-            'assign_input': assign_text,
-            'assign_wrapped': assign_wrapped
-        })
+        # ส่งไฟล์กลับ
+        print("[DEBUG] Saving final PDF...")
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as outpdf:
+            doc.save(outpdf.name)
+            doc.close()
+            print(f"[DEBUG] PDF saved, sending response...")
+            
+            response = send_file(outpdf.name, mimetype="application/pdf", as_attachment=True, download_name="summary_stamped.pdf")
+            response.headers['X-Debug'] = 'stamp_summary_processed'
+            return response
 
     except Exception as e:
         print(f"[ERROR] {str(e)}")
