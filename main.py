@@ -1298,7 +1298,7 @@ def stamp_summary():
                 paste_at_position(subject_bold, box_left + 10, current_y)
                 
                 # วาดส่วนที่เหลือเป็นตัวปกติ
-                remaining_text = wrapped_line[4:]  # ตัดคำ "เรื่อง" ออก (4 ตัวอักษร)
+                remaining_text = wrapped_line[5:]  # ตัดคำ "เรื่อง " ออก (5 ตัวอักษรรวมช่องว่าง)
                 subject_normal = draw_text_img(remaining_text, size=font_size, bold=False)
                 paste_at_position(subject_normal, box_left + 10 + subject_bold.width, current_y)
             else:
@@ -1325,7 +1325,7 @@ def stamp_summary():
                 paste_at_position(assign_bold, box_left + 10, current_y)
                 
                 # วาดส่วนที่เหลือเป็นตัวปกติ
-                remaining_text = assign_line[8:]  # ตัดคำ "เห็นควรมอบ" ออก (8 ตัวอักษร)
+                remaining_text = assign_line[9:]  # ตัดคำ "เห็นควรมอบ " ออก (9 ตัวอักษรรวมช่องว่าง)
                 assign_normal = draw_text_img(remaining_text, size=font_size, bold=False)
                 paste_at_position(assign_normal, box_left + 10 + assign_bold.width, current_y)
             else:
