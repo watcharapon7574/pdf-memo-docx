@@ -1355,7 +1355,7 @@ def stamp_summary():
                 paste_at_position(subject_bold, box_left + 10, current_y)
 
                 # วาดส่วนที่เหลือเป็นตัวปกติ
-                remaining_text = wrapped_line[5:]  # ตัดคำ "เรื่อง " ออก (5 ตัวอักษรรวมช่องว่าง)
+                remaining_text = wrapped_line.replace("เรื่อง ", "", 1)  # ตัดคำ "เรื่อง " ครั้งแรกออก
                 subject_normal = draw_text_img(remaining_text, size=font_size, bold=False, max_width=text_max_width - subject_bold.width)
                 paste_at_position(subject_normal, box_left + 10 + subject_bold.width, current_y)
             else:
@@ -1382,7 +1382,7 @@ def stamp_summary():
                 paste_at_position(assign_bold, box_left + 10, current_y)
 
                 # วาดส่วนที่เหลือเป็นตัวปกติ
-                remaining_text = assign_line[9:]  # ตัดคำ "เห็นควรมอบ " ออก (9 ตัวอักษรรวมช่องว่าง)
+                remaining_text = assign_line.replace("เห็นควรมอบ ", "", 1)  # ตัดคำ "เห็นควรมอบ " ครั้งแรกออก
                 assign_normal = draw_text_img(remaining_text, size=font_size, bold=False, max_width=text_max_width - assign_bold.width)
                 paste_at_position(assign_normal, box_left + 10 + assign_bold.width, current_y)
             else:
@@ -1948,7 +1948,7 @@ def add_signature_receive():
                 if i == 0 and wrapped_line.startswith("เรื่อง "):
                     subject_bold = draw_text_img("เรื่อง", size=font_size, bold=True, max_width=text_max_width)
                     paste_at_position(subject_bold, box_left + 10, current_y)
-                    remaining_text = wrapped_line[5:]
+                    remaining_text = wrapped_line.replace("เรื่อง ", "", 1)  # ตัดคำ "เรื่อง " ครั้งแรกออก
                     subject_normal = draw_text_img(remaining_text, size=font_size, bold=False, max_width=text_max_width - subject_bold.width)
                     paste_at_position(subject_normal, box_left + 10 + subject_bold.width, current_y)
                 else:
@@ -1969,7 +1969,7 @@ def add_signature_receive():
                 if i == 0 and assign_line.startswith("เห็นควรมอบ "):
                     assign_bold = draw_text_img("เห็นควรมอบ", size=font_size, bold=True, max_width=text_max_width)
                     paste_at_position(assign_bold, box_left + 10, current_y)
-                    remaining_text = assign_line[9:]
+                    remaining_text = assign_line.replace("เห็นควรมอบ ", "", 1)  # ตัดคำ "เห็นควรมอบ " ครั้งแรกออก
                     assign_normal = draw_text_img(remaining_text, size=font_size, bold=False, max_width=text_max_width - assign_bold.width)
                     paste_at_position(assign_normal, box_left + 10 + assign_bold.width, current_y)
                 else:
