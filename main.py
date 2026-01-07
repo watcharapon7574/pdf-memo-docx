@@ -1335,8 +1335,10 @@ def stamp_summary():
         line_height = 14
 
         # คำนวณจำนวนบรรทัดของแต่ละภาพ
-        estimated_subject_lines = max(1, round(img_subject.height / 16))
-        estimated_assign_lines = max(1, round(img_assign.height / 16))
+        # img_height = total_line_height + 2*padding(8) + (lines-1)*2
+        # ดังนั้น lines ≈ (img_height - 6) / 18
+        estimated_subject_lines = max(1, round((img_subject.height - 6) / 18))
+        estimated_assign_lines = max(1, round((img_assign.height - 6) / 18))
 
         total_height = padding_top
         total_height += line_height  # เรียน ผอ.
@@ -1381,13 +1383,15 @@ def stamp_summary():
 
         # เรื่อง + summary
         paste_at_position(img_subject, box_left + 10, current_y)
-        # คำนวณจำนวนบรรทัดจาก height ของภาพ (ลดระยะห่าง)
-        estimated_lines = max(1, round(img_subject.height / 16))
+        # คำนวณจำนวนบรรทัดจาก height ของภาพ
+        # img_height = total_line_height + 2*padding(8) + (lines-1)*2
+        # ดังนั้น lines = (img_height - 8 + 2) / (16 + 2) ≈ (img_height - 6) / 18
+        estimated_lines = max(1, round((img_subject.height - 6) / 18))
         current_y += estimated_lines * line_height
 
         # เห็นควรมอบ + group_name
         paste_at_position(img_assign, box_left + 10, current_y)
-        estimated_assign_lines = max(1, round(img_assign.height / 16))
+        estimated_assign_lines = max(1, round((img_assign.height - 6) / 18))
         current_y += estimated_assign_lines * line_height
         current_y += 2
 
@@ -1933,8 +1937,10 @@ def add_signature_receive():
             line_height = 14
 
             # คำนวณจำนวนบรรทัดของแต่ละภาพ
-            estimated_subject_lines = max(1, round(img_subject.height / 16))
-            estimated_assign_lines = max(1, round(img_assign.height / 16))
+            # img_height = total_line_height + 2*padding(8) + (lines-1)*2
+            # ดังนั้น lines ≈ (img_height - 6) / 18
+            estimated_subject_lines = max(1, round((img_subject.height - 6) / 18))
+            estimated_assign_lines = max(1, round((img_assign.height - 6) / 18))
 
             total_height = padding_top
             total_height += line_height  # เรียน ผอ.
@@ -1979,13 +1985,15 @@ def add_signature_receive():
 
             # เรื่อง + summary
             paste_at_position(img_subject, box_left + 10, current_y)
-            # คำนวณจำนวนบรรทัดจาก height ของภาพ (ลดระยะห่าง)
-            estimated_lines = max(1, round(img_subject.height / 16))
+            # คำนวณจำนวนบรรทัดจาก height ของภาพ
+            # img_height = total_line_height + 2*padding(8) + (lines-1)*2
+            # ดังนั้น lines = (img_height - 8 + 2) / (16 + 2) ≈ (img_height - 6) / 18
+            estimated_lines = max(1, round((img_subject.height - 6) / 18))
             current_y += estimated_lines * line_height
 
             # เห็นควรมอบ + group_name
             paste_at_position(img_assign, box_left + 10, current_y)
-            estimated_assign_lines = max(1, round(img_assign.height / 16))
+            estimated_assign_lines = max(1, round((img_assign.height - 6) / 18))
             current_y += estimated_assign_lines * line_height
             current_y += 2
 
