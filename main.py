@@ -1095,7 +1095,7 @@ def stamp_summary():
             lines = []
             current_line = ""
 
-            for word in words:
+            for i, word in enumerate(words):
                 test_line = current_line + (" " if current_line else "") + word
                 bbox = font.getbbox(test_line)
                 text_width = bbox[2] - bbox[0]
@@ -1127,9 +1127,13 @@ def stamp_summary():
                                 current_line = char
                     else:
                         # คำไม่ยาวเกิน แต่รวมกับบรรทัดปัจจุบันแล้วยาวเกิน
-                        if current_line:
-                            lines.append(current_line)
-                        current_line = word
+                        # กรณีพิเศษ: ถ้าบรรทัดปัจจุบันคือ "เรื่อง" หรือ "เห็นควรมอบ" ให้บังคับเพิ่มคำถัดไปเข้าไปด้วย
+                        if current_line == "เรื่อง" or current_line == "เห็นควรมอบ":
+                            current_line = test_line  # บังคับใส่คำถัดไปเข้าไป
+                        else:
+                            if current_line:
+                                lines.append(current_line)
+                            current_line = word
 
             if current_line:
                 lines.append(current_line)
@@ -1351,8 +1355,8 @@ def stamp_summary():
             page.insert_image(rect, stream=bio.getvalue())
 
         # วาดข้อความในตรา (ใช้ภาพที่สร้างไว้แล้ว)
-        # ใช้ระยะห่างแบบเดิม (18px ต่อบรรทัด)
-        line_height = 18
+        # ใช้ระยะห่างแบบเดิม
+        line_height = 14
         current_y = box_top + padding_top
 
         # เรียน ผอ.
@@ -1361,15 +1365,15 @@ def stamp_summary():
 
         # เรื่อง + summary
         paste_at_position(img_subject, box_left + 10, current_y)
-        # คำนวณจำนวนบรรทัดจาก height ของภาพ
-        estimated_lines = max(1, round(img_subject.height / 18))
+        # คำนวณจำนวนบรรทัดจาก height ของภาพ (ลดระยะห่าง)
+        estimated_lines = max(1, round(img_subject.height / 16))
         current_y += estimated_lines * line_height
 
         # เห็นควรมอบ + group_name
         paste_at_position(img_assign, box_left + 10, current_y)
-        estimated_assign_lines = max(1, round(img_assign.height / 18))
+        estimated_assign_lines = max(1, round(img_assign.height / 16))
         current_y += estimated_assign_lines * line_height
-        current_y += 4
+        current_y += 2
 
         # ลายเซ็น (ใช้ภาพที่สร้างไว้แล้ว)
         center_x_frame = box_left + stamp_width//2
@@ -1384,7 +1388,7 @@ def stamp_summary():
         # วางลายเซ็นติดข้าง
         paste_at_position(sign_img, start_x + img_sign_text.width + 5, sign_y)
 
-        current_y += line_height + 4
+        current_y += line_height + 2
 
         # ผู้รับ (กึ่งกลาง - ใช้ภาพที่สร้างไว้แล้ว)
         paste_at_position(img_receiver, center_x_frame - img_receiver.width//2, current_y)
@@ -1795,7 +1799,7 @@ def add_signature_receive():
                 lines = []
                 current_line = ""
 
-                for word in words:
+                for i, word in enumerate(words):
                     test_line = current_line + (" " if current_line else "") + word
                     bbox = font.getbbox(test_line)
                     text_width = bbox[2] - bbox[0]
@@ -1827,9 +1831,13 @@ def add_signature_receive():
                                     current_line = char
                         else:
                             # คำไม่ยาวเกิน แต่รวมกับบรรทัดปัจจุบันแล้วยาวเกิน
-                            if current_line:
-                                lines.append(current_line)
-                            current_line = word
+                            # กรณีพิเศษ: ถ้าบรรทัดปัจจุบันคือ "เรื่อง" หรือ "เห็นควรมอบ" ให้บังคับเพิ่มคำถัดไปเข้าไปด้วย
+                            if current_line == "เรื่อง" or current_line == "เห็นควรมอบ":
+                                current_line = test_line  # บังคับใส่คำถัดไปเข้าไป
+                            else:
+                                if current_line:
+                                    lines.append(current_line)
+                                current_line = word
 
                 if current_line:
                     lines.append(current_line)
@@ -1929,8 +1937,8 @@ def add_signature_receive():
                 page.insert_image(rect, stream=bio.getvalue())
 
             # วาดข้อความในตรา (ใช้ภาพที่สร้างไว้แล้ว)
-            # ใช้ระยะห่างแบบเดิม (18px ต่อบรรทัด)
-            line_height = 18
+            # ใช้ระยะห่างแบบเดิม
+            line_height = 14
             current_y = box_top + padding_top
 
             # เรียน ผอ.
@@ -1939,15 +1947,15 @@ def add_signature_receive():
 
             # เรื่อง + summary
             paste_at_position(img_subject, box_left + 10, current_y)
-            # คำนวณจำนวนบรรทัดจาก height ของภาพ
-            estimated_lines = max(1, round(img_subject.height / 18))
+            # คำนวณจำนวนบรรทัดจาก height ของภาพ (ลดระยะห่าง)
+            estimated_lines = max(1, round(img_subject.height / 16))
             current_y += estimated_lines * line_height
 
             # เห็นควรมอบ + group_name
             paste_at_position(img_assign, box_left + 10, current_y)
-            estimated_assign_lines = max(1, round(img_assign.height / 18))
+            estimated_assign_lines = max(1, round(img_assign.height / 16))
             current_y += estimated_assign_lines * line_height
-            current_y += 4
+            current_y += 2
 
             # ลายเซ็น (ใช้ภาพที่สร้างไว้แล้ว)
             center_x_frame = box_left + stamp_width//2
@@ -1959,7 +1967,7 @@ def add_signature_receive():
             paste_at_position(img_sign_text, start_x, sign_y)
             paste_at_position(sign_img, start_x + img_sign_text.width + 5, sign_y)
 
-            current_y += line_height + 4
+            current_y += line_height + 2
 
             # ผู้รับ (ใช้ภาพที่สร้างไว้แล้ว)
             paste_at_position(img_receiver, center_x_frame - img_receiver.width//2, current_y)
