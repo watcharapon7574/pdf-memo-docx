@@ -413,7 +413,19 @@ def add_signature_v2():
                             else:
                                 # For text types: 'comment', 'name', 'position', 'academic_rank', 'org_structure_role', 'timestamp'
                                 text_value = line.get('text') or line.get('value') or line.get('comment') or ''
-                                text = to_thai_digits(text_value)
+
+                                # ถ้าเป็น comment และมี - ให้แยกเป็นหลายบรรทัด
+                                if line_type == 'comment' and '-' in text_value:
+                                    # แยกตาม - และเก็บ - ไว้ข้างหน้าแต่ละบรรทัด
+                                    parts = text_value.split('-')
+                                    # เอา parts ที่ไม่ว่างเปล่าออกมา
+                                    text_lines = ['-' + part for part in parts if part.strip()]
+                                    # ถ้าขึ้นต้นด้วย - อยู่แล้ว (เช่น "-abc-def") parts[0] จะเป็น ''
+                                    if parts[0] == '':
+                                        text_lines = text_lines  # ถูกต้องแล้ว
+                                    text = '\n'.join([to_thai_digits(t) for t in text_lines])
+                                else:
+                                    text = to_thai_digits(text_value)
                                 # ถ้า type == "comment" ให้ font_size=20, font_weight="bold"
                                 font_size = 20 if line_type == 'comment' else DEFAULT_COMMENT_FONT_SIZE
                                 font_weight = "bold" if line_type == 'comment' else "regular"
@@ -1757,7 +1769,19 @@ def add_signature_receive():
                             else:
                                 # For text types: 'comment', 'name', 'position', 'academic_rank', 'org_structure_role', 'timestamp'
                                 text_value = line.get('text') or line.get('value') or line.get('comment') or ''
-                                text = to_thai_digits(text_value)
+
+                                # ถ้าเป็น comment และมี - ให้แยกเป็นหลายบรรทัด
+                                if line_type == 'comment' and '-' in text_value:
+                                    # แยกตาม - และเก็บ - ไว้ข้างหน้าแต่ละบรรทัด
+                                    parts = text_value.split('-')
+                                    # เอา parts ที่ไม่ว่างเปล่าออกมา
+                                    text_lines = ['-' + part for part in parts if part.strip()]
+                                    # ถ้าขึ้นต้นด้วย - อยู่แล้ว (เช่น "-abc-def") parts[0] จะเป็น ''
+                                    if parts[0] == '':
+                                        text_lines = text_lines  # ถูกต้องแล้ว
+                                    text = '\n'.join([to_thai_digits(t) for t in text_lines])
+                                else:
+                                    text = to_thai_digits(text_value)
                                 font_size = 20 if line_type == 'comment' else DEFAULT_COMMENT_FONT_SIZE
                                 font_weight = "bold" if line_type == 'comment' else "regular"
                                 orig_color = line.get('color', (2, 53, 139))
