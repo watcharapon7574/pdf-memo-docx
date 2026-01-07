@@ -1264,20 +1264,10 @@ def stamp_summary():
         first_line_spacing = font_size  # บรรทัดแรก = ขนาดฟอนต์ (16)
         other_line_spacing = font_size - 4  # บรรทัดอื่น = ขนาดฟอนต์ - 4 (12)
         
-        # นับบรรทัดหัวข้อ "เรียน..."
-        header_wrapped = wrap_text(header_text, 30)
-        total_lines = len(header_wrapped)
-        
-        # นับบรรทัดสำหรับ "เรื่อง" + summary (ใช้การตัดแบบเดิม)
-        subject_text = f"เรื่อง {summary}"
-        subject_wrapped = wrap_text(subject_text, 30)
-        total_lines += len(subject_wrapped)
-        
-        # นับบรรทัดมอบหมาย "เห็นควรมอบ" + group_name (ใช้การตัดแบบเดิม)
-        assign_text = f"เห็นควรมอบ {group_name}"
-        assign_wrapped = wrap_text(assign_text, 30)
-        total_lines += len(assign_wrapped)
-        
+        # นับจำนวนบรรทัดทั้งหมด (ไม่ใช้ wrap_text แล้ว)
+        total_lines = 1  # เรียน ผอ.
+        total_lines += 1  # เรื่อง + summary
+        total_lines += 1  # เห็นควรมอบ + group_name
         total_lines += 1  # บรรทัด "ลงชื่อ + ลายเซ็น"
         total_lines += 1  # บรรทัด "ผู้รับ..."
         total_lines += 1  # บรรทัด "วันที่..."
@@ -1340,57 +1330,19 @@ def stamp_summary():
         paste_at_position(img1, box_left + 10, current_y)
         current_y += first_line_spacing  # ใช้ระยะห่างบรรทัดแรก
 
-        # บรรทัดที่ 2: "เรื่อง" + summary (ใช้การตัดแบบเดิม 30 ตัวอักษร)
+        # บรรทัดที่ 2: "เรื่อง" + summary (วาดทั้งบรรทัดไม่แยก)
         subject_text = f"เรื่อง {summary}"
-        wrapped_lines = wrap_text(subject_text, 30)
-        for i, wrapped_line in enumerate(wrapped_lines):
-            # Debug: ตรวจสอบ type
-            if isinstance(wrapped_line, list):
-                wrapped_line = ' '.join(wrapped_line)
-
-            # วาดข้อความโดยทำให้คำ "เรื่อง" เป็นตัวหนาในบรรทัดแรก
-            if i == 0 and wrapped_line.startswith("เรื่อง "):
-                # แยกคำ "เรื่อง" ออกมาเป็นตัวหนา
-                subject_bold = draw_text_img("เรื่อง", size=font_size, bold=True, max_width=text_max_width)
-                paste_at_position(subject_bold, box_left + 10, current_y)
-
-                # วาดส่วนที่เหลือเป็นตัวปกติ
-                remaining_text = wrapped_line.replace("เรื่อง ", "", 1)  # ตัดคำ "เรื่อง " ครั้งแรกออก
-                subject_normal = draw_text_img(remaining_text, size=font_size, bold=False, max_width=text_max_width - subject_bold.width)
-                paste_at_position(subject_normal, box_left + 10 + subject_bold.width, current_y)
-            else:
-                # บรรทัดอื่นๆ ปกติ
-                img_summary = draw_text_img(wrapped_line, size=font_size, bold=False, max_width=text_max_width)
-                paste_at_position(img_summary, box_left + 10, current_y)
-
-            current_y += other_line_spacing
+        img_subject = draw_text_img(subject_text, size=font_size, bold=False, max_width=text_max_width)
+        paste_at_position(img_subject, box_left + 10, current_y)
+        current_y += other_line_spacing
 
         current_y += 2  # เว้นบรรทัดเล็กน้อย
 
-        # บรรทัดมอบหมาย: "เห็นควรมอบ" + group_name (ใช้การตัดแบบเดิม 30 ตัวอักษร)
+        # บรรทัดมอบหมาย: "เห็นควรมอบ" + group_name (วาดทั้งบรรทัดไม่แยก)
         assign_text = f"เห็นควรมอบ {group_name}"
-        assign_wrapped = wrap_text(assign_text, 30)
-        for i, assign_line in enumerate(assign_wrapped):
-            # Debug: ตรวจสอบ type
-            if isinstance(assign_line, list):
-                assign_line = ' '.join(assign_line)
-
-            # วาดข้อความโดยทำให้คำ "เห็นควรมอบ" เป็นตัวหนาในบรรทัดแรก
-            if i == 0 and assign_line.startswith("เห็นควรมอบ "):
-                # แยกคำ "เห็นควรมอบ" ออกมาเป็นตัวหนา
-                assign_bold = draw_text_img("เห็นควรมอบ", size=font_size, bold=True, max_width=text_max_width)
-                paste_at_position(assign_bold, box_left + 10, current_y)
-
-                # วาดส่วนที่เหลือเป็นตัวปกติ
-                remaining_text = assign_line.replace("เห็นควรมอบ ", "", 1)  # ตัดคำ "เห็นควรมอบ " ครั้งแรกออก
-                assign_normal = draw_text_img(remaining_text, size=font_size, bold=False, max_width=text_max_width - assign_bold.width)
-                paste_at_position(assign_normal, box_left + 10 + assign_bold.width, current_y)
-            else:
-                # บรรทัดอื่นๆ ปกติ
-                img_assign = draw_text_img(assign_line, size=font_size, bold=False, max_width=text_max_width)
-                paste_at_position(img_assign, box_left + 10, current_y)
-
-            current_y += other_line_spacing
+        img_assign = draw_text_img(assign_text, size=font_size, bold=False, max_width=text_max_width)
+        paste_at_position(img_assign, box_left + 10, current_y)
+        current_y += other_line_spacing
         current_y += 12  # เพิ่มระยะห่างก่อนลายเซ็นมากขึ้น
         
         # ลายเซ็น
@@ -1875,24 +1827,17 @@ def add_signature_receive():
 
                 return img
 
-            # คำนวณจำนวนบรรทัด
+            # คำนวณจำนวนบรรทัด (ไม่ใช้ wrap_text แล้ว)
             font_size = 16
             first_line_spacing = font_size
             other_line_spacing = font_size - 4
 
-            header_text = "เรียน ผอ. ศกศ.เขต ๖ จ.ลพบุรี"
-            header_wrapped = wrap_text(header_text, 30)
-            total_lines = len(header_wrapped)
-
-            subject_text = f"เรื่อง {summary}"
-            subject_wrapped = wrap_text(subject_text, 30)
-            total_lines += len(subject_wrapped)
-
-            assign_text = f"เห็นควรมอบ {group_name}"
-            assign_wrapped = wrap_text(assign_text, 30)
-            total_lines += len(assign_wrapped)
-
-            total_lines += 3  # ลงชื่อ + ผู้รับ + วันที่
+            total_lines = 1  # เรียน ผอ.
+            total_lines += 1  # เรื่อง + summary
+            total_lines += 1  # เห็นควรมอบ + group_name
+            total_lines += 1  # ลงชื่อ + ลายเซ็น
+            total_lines += 1  # ผู้รับ
+            total_lines += 1  # วันที่
 
             # คำนวณความสูง
             padding_top = 8
@@ -1938,45 +1883,19 @@ def add_signature_receive():
             paste_at_position(img1, box_left + 10, current_y)
             current_y += first_line_spacing
 
-            # เรื่อง + summary
+            # เรื่อง + summary (วาดทั้งบรรทัดไม่แยก)
             subject_text = f"เรื่อง {summary}"
-            wrapped_lines = wrap_text(subject_text, 30)
-            for i, wrapped_line in enumerate(wrapped_lines):
-                if isinstance(wrapped_line, list):
-                    wrapped_line = ' '.join(wrapped_line)
-
-                if i == 0 and wrapped_line.startswith("เรื่อง "):
-                    subject_bold = draw_text_img("เรื่อง", size=font_size, bold=True, max_width=text_max_width)
-                    paste_at_position(subject_bold, box_left + 10, current_y)
-                    remaining_text = wrapped_line.replace("เรื่อง ", "", 1)  # ตัดคำ "เรื่อง " ครั้งแรกออก
-                    subject_normal = draw_text_img(remaining_text, size=font_size, bold=False, max_width=text_max_width - subject_bold.width)
-                    paste_at_position(subject_normal, box_left + 10 + subject_bold.width, current_y)
-                else:
-                    img_summary = draw_text_img(wrapped_line, size=font_size, bold=False, max_width=text_max_width)
-                    paste_at_position(img_summary, box_left + 10, current_y)
-
-                current_y += other_line_spacing
+            img_subject = draw_text_img(subject_text, size=font_size, bold=False, max_width=text_max_width)
+            paste_at_position(img_subject, box_left + 10, current_y)
+            current_y += other_line_spacing
 
             current_y += 2
 
-            # เห็นควรมอบ
+            # เห็นควรมอบ (วาดทั้งบรรทัดไม่แยก)
             assign_text = f"เห็นควรมอบ {group_name}"
-            assign_wrapped = wrap_text(assign_text, 30)
-            for i, assign_line in enumerate(assign_wrapped):
-                if isinstance(assign_line, list):
-                    assign_line = ' '.join(assign_line)
-
-                if i == 0 and assign_line.startswith("เห็นควรมอบ "):
-                    assign_bold = draw_text_img("เห็นควรมอบ", size=font_size, bold=True, max_width=text_max_width)
-                    paste_at_position(assign_bold, box_left + 10, current_y)
-                    remaining_text = assign_line.replace("เห็นควรมอบ ", "", 1)  # ตัดคำ "เห็นควรมอบ " ครั้งแรกออก
-                    assign_normal = draw_text_img(remaining_text, size=font_size, bold=False, max_width=text_max_width - assign_bold.width)
-                    paste_at_position(assign_normal, box_left + 10 + assign_bold.width, current_y)
-                else:
-                    img_assign = draw_text_img(assign_line, size=font_size, bold=False, max_width=text_max_width)
-                    paste_at_position(img_assign, box_left + 10, current_y)
-
-                current_y += other_line_spacing
+            img_assign = draw_text_img(assign_text, size=font_size, bold=False, max_width=text_max_width)
+            paste_at_position(img_assign, box_left + 10, current_y)
+            current_y += other_line_spacing
 
             current_y += 12
 
