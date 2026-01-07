@@ -1351,22 +1351,25 @@ def stamp_summary():
             page.insert_image(rect, stream=bio.getvalue())
 
         # วาดข้อความในตรา (ใช้ภาพที่สร้างไว้แล้ว)
+        # ใช้ระยะห่างแบบเดิม (18px ต่อบรรทัด)
+        line_height = 18
         current_y = box_top + padding_top
 
         # เรียน ผอ.
         paste_at_position(img1, box_left + 10, current_y)
-        current_y += img1.height + line_spacing
+        current_y += line_height
 
         # เรื่อง + summary
         paste_at_position(img_subject, box_left + 10, current_y)
-        current_y += img_subject.height + line_spacing
-
-        current_y += 2  # เว้นบรรทัดเล็กน้อย
+        # คำนวณจำนวนบรรทัดจาก height ของภาพ
+        estimated_lines = max(1, round(img_subject.height / 18))
+        current_y += estimated_lines * line_height
 
         # เห็นควรมอบ + group_name
         paste_at_position(img_assign, box_left + 10, current_y)
-        current_y += img_assign.height + line_spacing
-        current_y += 12  # เพิ่มระยะห่างก่อนลายเซ็นมากขึ้น
+        estimated_assign_lines = max(1, round(img_assign.height / 18))
+        current_y += estimated_assign_lines * line_height
+        current_y += 4
 
         # ลายเซ็น (ใช้ภาพที่สร้างไว้แล้ว)
         center_x_frame = box_left + stamp_width//2
@@ -1381,11 +1384,11 @@ def stamp_summary():
         # วางลายเซ็นติดข้าง
         paste_at_position(sign_img, start_x + img_sign_text.width + 5, sign_y)
 
-        current_y += max(sign_height, img_sign_text.height) + line_spacing
+        current_y += line_height + 4
 
         # ผู้รับ (กึ่งกลาง - ใช้ภาพที่สร้างไว้แล้ว)
         paste_at_position(img_receiver, center_x_frame - img_receiver.width//2, current_y)
-        current_y += img_receiver.height + line_spacing
+        current_y += line_height
 
         # วันที่ (กึ่งกลาง - ใช้ภาพที่สร้างไว้แล้ว)
         paste_at_position(img_date, center_x_frame - img_date.width//2, current_y)
@@ -1926,23 +1929,25 @@ def add_signature_receive():
                 page.insert_image(rect, stream=bio.getvalue())
 
             # วาดข้อความในตรา (ใช้ภาพที่สร้างไว้แล้ว)
+            # ใช้ระยะห่างแบบเดิม (18px ต่อบรรทัด)
+            line_height = 18
             current_y = box_top + padding_top
 
             # เรียน ผอ.
             paste_at_position(img1, box_left + 10, current_y)
-            current_y += img1.height + line_spacing
+            current_y += line_height
 
             # เรื่อง + summary
             paste_at_position(img_subject, box_left + 10, current_y)
-            current_y += img_subject.height + line_spacing
-
-            current_y += 2
+            # คำนวณจำนวนบรรทัดจาก height ของภาพ
+            estimated_lines = max(1, round(img_subject.height / 18))
+            current_y += estimated_lines * line_height
 
             # เห็นควรมอบ + group_name
             paste_at_position(img_assign, box_left + 10, current_y)
-            current_y += img_assign.height + line_spacing
-
-            current_y += 12
+            estimated_assign_lines = max(1, round(img_assign.height / 18))
+            current_y += estimated_assign_lines * line_height
+            current_y += 4
 
             # ลายเซ็น (ใช้ภาพที่สร้างไว้แล้ว)
             center_x_frame = box_left + stamp_width//2
@@ -1954,11 +1959,11 @@ def add_signature_receive():
             paste_at_position(img_sign_text, start_x, sign_y)
             paste_at_position(sign_img, start_x + img_sign_text.width + 5, sign_y)
 
-            current_y += max(sign_height, img_sign_text.height) + line_spacing
+            current_y += line_height + 4
 
             # ผู้รับ (ใช้ภาพที่สร้างไว้แล้ว)
             paste_at_position(img_receiver, center_x_frame - img_receiver.width//2, current_y)
-            current_y += img_receiver.height + line_spacing
+            current_y += line_height
 
             # วันที่ (ใช้ภาพที่สร้างไว้แล้ว)
             paste_at_position(img_date, center_x_frame - img_date.width//2, current_y)
