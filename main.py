@@ -1106,8 +1106,10 @@ def stamp_summary():
                     # กรณีพิเศษ: ถ้าบรรทัดปัจจุบันคือ "เรื่อง" หรือ "เห็นควรมอบ" ต้องเก็บคำถัดไปไว้ด้วยเสมอ
                     if current_line == "เรื่อง" or current_line == "เห็นควรมอบ":
                         # บังคับรวม prefix กับคำแรกของข้อความ แล้วตัดทีละตัวอักษร
+                        # เพิ่ม space ครั้งเดียวหลัง prefix
+                        current_line = current_line + " "
                         for char in word:
-                            test_char = current_line + " " + char if not current_line.endswith(" ") else current_line + char
+                            test_char = current_line + char
                             char_bbox = font.getbbox(test_char)
                             char_width = char_bbox[2] - char_bbox[0]
 
@@ -1327,20 +1329,23 @@ def stamp_summary():
         date_text_str = f"วันที่ {date}"
         img_date = draw_text_img(date_text_str, size=font_size, bold=False)
 
-        # คำนวณความสูงจริง
+        # คำนวณความสูงจริงตามที่จะใช้ในการวาด
         padding_top = 8
         padding_bottom = 8
-        line_spacing = 2
+        line_height = 14
+
+        # คำนวณจำนวนบรรทัดของแต่ละภาพ
+        estimated_subject_lines = max(1, round(img_subject.height / 16))
+        estimated_assign_lines = max(1, round(img_assign.height / 16))
 
         total_height = padding_top
-        total_height += img1.height + line_spacing
-        total_height += img_subject.height + line_spacing
-        total_height += 2  # เว้นบรรทัด
-        total_height += img_assign.height + line_spacing
-        total_height += 12  # เว้นก่อนลายเซ็น
-        total_height += max(sign_height, img_sign_text.height) + line_spacing
-        total_height += img_receiver.height + line_spacing
-        total_height += img_date.height + line_spacing
+        total_height += line_height  # เรียน ผอ.
+        total_height += estimated_subject_lines * line_height  # เรื่อง
+        total_height += estimated_assign_lines * line_height  # เห็นควรมอบ
+        total_height += 2  # เว้นหลัง assign
+        total_height += line_height + 2  # ลงชื่อ
+        total_height += line_height  # ผู้รับ
+        total_height += line_height  # วันที่
         total_height += padding_bottom
 
         stamp_height = int(total_height)
@@ -1821,8 +1826,10 @@ def add_signature_receive():
                         # กรณีพิเศษ: ถ้าบรรทัดปัจจุบันคือ "เรื่อง" หรือ "เห็นควรมอบ" ต้องเก็บคำถัดไปไว้ด้วยเสมอ
                         if current_line == "เรื่อง" or current_line == "เห็นควรมอบ":
                             # บังคับรวม prefix กับคำแรกของข้อความ แล้วตัดทีละตัวอักษร
+                            # เพิ่ม space ครั้งเดียวหลัง prefix
+                            current_line = current_line + " "
                             for char in word:
-                                test_char = current_line + " " + char if not current_line.endswith(" ") else current_line + char
+                                test_char = current_line + char
                                 char_bbox = font.getbbox(test_char)
                                 char_width = char_bbox[2] - char_bbox[0]
 
@@ -1920,20 +1927,23 @@ def add_signature_receive():
             date_text_str = f"วันที่ {date}"
             img_date = draw_text_img(date_text_str, size=font_size, bold=False)
 
-            # คำนวณความสูงจริง
+            # คำนวณความสูงจริงตามที่จะใช้ในการวาด
             padding_top = 8
             padding_bottom = 8
-            line_spacing = 2
+            line_height = 14
+
+            # คำนวณจำนวนบรรทัดของแต่ละภาพ
+            estimated_subject_lines = max(1, round(img_subject.height / 16))
+            estimated_assign_lines = max(1, round(img_assign.height / 16))
 
             total_height = padding_top
-            total_height += img1.height + line_spacing
-            total_height += img_subject.height + line_spacing
-            total_height += 2
-            total_height += img_assign.height + line_spacing
-            total_height += 12
-            total_height += max(sign_height, img_sign_text.height) + line_spacing
-            total_height += img_receiver.height + line_spacing
-            total_height += img_date.height + line_spacing
+            total_height += line_height  # เรียน ผอ.
+            total_height += estimated_subject_lines * line_height  # เรื่อง
+            total_height += estimated_assign_lines * line_height  # เห็นควรมอบ
+            total_height += 2  # เว้นหลัง assign
+            total_height += line_height + 2  # ลงชื่อ
+            total_height += line_height  # ผู้รับ
+            total_height += line_height  # วันที่
             total_height += padding_bottom
 
             stamp_height = int(total_height)
