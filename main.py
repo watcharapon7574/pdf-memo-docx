@@ -1283,128 +1283,111 @@ def stamp_summary():
                 pass
             return lines
 
-        # คำนวณจำนวนบรรทัดทั้งหมด
+        # สร้างข้อความทั้งหมดก่อนเพื่อคำนวณความสูงจริง
         font_size = 16
-        first_line_spacing = font_size  # บรรทัดแรก = ขนาดฟอนต์ (16)
-        other_line_spacing = font_size - 4  # บรรทัดอื่น = ขนาดฟอนต์ - 4 (12)
-        
-        # นับจำนวนบรรทัดทั้งหมด (ไม่ใช้ wrap_text แล้ว)
-        total_lines = 1  # เรียน ผอ.
-        total_lines += 1  # เรื่อง + summary
-        total_lines += 1  # เห็นควรมอบ + group_name
-        total_lines += 1  # บรรทัด "ลงชื่อ + ลายเซ็น"
-        total_lines += 1  # บรรทัด "ผู้รับ..."
-        total_lines += 1  # บรรทัด "วันที่..."
-        
-        # คำนวณความสูงรวม (แน่นมากขึ้น)
+        text_max_width = stamp_width - 20  # เว้นขอบซ้าย-ขวา 10 px
+
+        # สร้างภาพข้อความทั้งหมดก่อน
+        text1 = "เรียน ผอ. ศกศ.เขต ๖ จ.ลพบุรี"
+        img1 = draw_text_img(text1, size=font_size, bold=True, max_width=text_max_width)
+
+        subject_text = f"เรื่อง {summary}"
+        img_subject = draw_text_img(subject_text, size=font_size, bold=False, max_width=text_max_width)
+
+        assign_text = f"เห็นควรมอบ {group_name}"
+        img_assign = draw_text_img(assign_text, size=font_size, bold=False, max_width=text_max_width)
+
+        sign_img_temp = Image.open(sign_file)
+        sign_height = 30
+        ratio = sign_height / sign_img_temp.height
+        sign_width = int(sign_img_temp.width * ratio)
+        sign_img = sign_img_temp.resize((sign_width, sign_height), Image.LANCZOS)
+
+        sign_text = "ลงชื่อ"
+        img_sign_text = draw_text_img(sign_text, size=font_size, bold=False)
+
+        receiver_text_str = f"ผู้รับ  {receiver_name}"
+        img_receiver = draw_text_img(receiver_text_str, size=font_size, bold=False)
+
+        date_text_str = f"วันที่ {date}"
+        img_date = draw_text_img(date_text_str, size=font_size, bold=False)
+
+        # คำนวณความสูงจริง
         padding_top = 8
         padding_bottom = 8
-        signature_space = 18  # ลดพื้นที่ลายเซ็นอีก
-        spacing_before_signature = 5  # ลดระยะห่างก่อนลายเซ็นอีก
-        spacing_after_signature = 8   # ลดระยะห่างหลังลายเซ็นอีก
-        
-        # คำนวณความสูงจริงตามจำนวนบรรทัด
-        text_height = first_line_spacing + (total_lines - 1) * other_line_spacing
-        
-        calculated_height = (padding_top + 
-                           text_height +
-                           spacing_before_signature + 
-                           signature_space + 
-                           spacing_after_signature + 
-                           padding_bottom)
-        
-        stamp_height = int(calculated_height)  # ใช้ความสูงที่คำนวณได้เท่านั้น
+        line_spacing = 2
+
+        total_height = padding_top
+        total_height += img1.height + line_spacing
+        total_height += img_subject.height + line_spacing
+        total_height += 2  # เว้นบรรทัด
+        total_height += img_assign.height + line_spacing
+        total_height += 12  # เว้นก่อนลายเซ็น
+        total_height += max(sign_height, img_sign_text.height) + line_spacing
+        total_height += img_receiver.height + line_spacing
+        total_height += img_date.height + line_spacing
+        total_height += padding_bottom
+
+        stamp_height = int(total_height)
         
         # คำนวณตำแหน่งกรอบ
         center_x = margin + stamp_width//2
         center_y = page_h - margin - stamp_height//2
-        
-        print(f"[DEBUG] Using simple 30-character text wrapping")
-        print(f"[DEBUG] Summary text: '{summary}'")
-        print(f"[DEBUG] Summary wrapped: {wrap_text(summary, 0)}")
-        print(f"[DEBUG] Calculated lines: {total_lines}, height: {calculated_height}, final height: {stamp_height}")
-        print(f"[DEBUG] Page size: {page_w}x{page_h}")
-        print(f"[DEBUG] Stamp position: center_x={center_x}, center_y={center_y}")
 
         # วาดกรอบตรา
         box_left = center_x - stamp_width//2
-        box_top = center_y - stamp_height//2  
+        box_top = center_y - stamp_height//2
         box_right = center_x + stamp_width//2
         box_bottom = center_y + stamp_height//2
-        
+
         box_rect = fitz.Rect(box_left, box_top, box_right, box_bottom)
-        box_color = (2/255, 53/255, 139/255)  # สีน้ำเงิน
+        box_color = (2/255, 53/255, 139/255)
         page.draw_rect(box_rect, color=box_color, width=2)
 
         def paste_at_position(img, x, y):
             rect = fitz.Rect(x, y, x+img.width, y+img.height)
-            bio = io.BytesIO(); img.save(bio, format='PNG')
+            bio = io.BytesIO()
+            img.save(bio, format='PNG')
             page.insert_image(rect, stream=bio.getvalue())
 
-        # วาดข้อความในตรา
-        font_size = 16
-        first_line_spacing = font_size  # บรรทัดแรก = ขนาดฟอนต์ (16)
-        other_line_spacing = font_size - 4  # บรรทัดอื่น = ขนาดฟอนต์ - 4 (12)
-        current_y = box_top + 8  # เริ่มใกล้ขอบบนของกรอบมากขึ้น
-        text_max_width = stamp_width - 20  # เว้นขอบซ้าย-ขวา 10 px
+        # วาดข้อความในตรา (ใช้ภาพที่สร้างไว้แล้ว)
+        current_y = box_top + padding_top
 
-        # บรรทัดที่ 1: เรียน ผอ. ศกศ.เขต ๖ จ.ลพบุรี
-        text1 = "เรียน ผอ. ศกศ.เขต ๖ จ.ลพบุรี"
-        img1 = draw_text_img(text1, size=font_size, bold=True, max_width=text_max_width)
+        # เรียน ผอ.
         paste_at_position(img1, box_left + 10, current_y)
-        current_y += first_line_spacing  # ใช้ระยะห่างบรรทัดแรก
+        current_y += img1.height + line_spacing
 
-        # บรรทัดที่ 2: "เรื่อง" + summary (วาดทั้งบรรทัดไม่แยก)
-        subject_text = f"เรื่อง {summary}"
-        img_subject = draw_text_img(subject_text, size=font_size, bold=False, max_width=text_max_width)
+        # เรื่อง + summary
         paste_at_position(img_subject, box_left + 10, current_y)
-        current_y += img_subject.height + 2  # ใช้ความสูงจริงของภาพ
+        current_y += img_subject.height + line_spacing
 
         current_y += 2  # เว้นบรรทัดเล็กน้อย
 
-        # บรรทัดมอบหมาย: "เห็นควรมอบ" + group_name (วาดทั้งบรรทัดไม่แยก)
-        assign_text = f"เห็นควรมอบ {group_name}"
-        img_assign = draw_text_img(assign_text, size=font_size, bold=False, max_width=text_max_width)
+        # เห็นควรมอบ + group_name
         paste_at_position(img_assign, box_left + 10, current_y)
-        current_y += img_assign.height + 2  # ใช้ความสูงจริงของภาพ
+        current_y += img_assign.height + line_spacing
         current_y += 12  # เพิ่มระยะห่างก่อนลายเซ็นมากขึ้น
-        
-        # ลายเซ็น
-        sign_img = Image.open(sign_file)
-        # ปรับขนาดลายเซ็น
-        sign_height = 30  # กลับเป็น 30
-        ratio = sign_height / sign_img.height
-        sign_width = int(sign_img.width * ratio)
-        sign_img = sign_img.resize((sign_width, sign_height), Image.LANCZOS)
-        
-        # คำนวณตำแหน่งกึ่งกลางของกรอบ
+
+        # ลายเซ็น (ใช้ภาพที่สร้างไว้แล้ว)
         center_x_frame = box_left + stamp_width//2
-        
-        # ข้อความลงชื่อ และลายเซ็น (แบบต่อเนื่องกัน)
-        sign_text = "ลงชื่อ"
-        img_sign_text = draw_text_img(sign_text, size=font_size, bold=False)
-        
+
         # คำนวณตำแหน่งเริ่มต้นให้อยู่กึ่งกลาง
-        total_width = img_sign_text.width + 5 + sign_width  # ความกว้างรวม (ข้อความ + gap + ลายเซ็น)
+        total_width = img_sign_text.width + 5 + sign_width
         start_x = center_x_frame - total_width//2
-        
+
         sign_y = current_y
         # วาง "ลงชื่อ" ก่อน
         paste_at_position(img_sign_text, start_x, sign_y)
         # วางลายเซ็นติดข้าง
         paste_at_position(sign_img, start_x + img_sign_text.width + 5, sign_y)
-        
-        current_y += 18  # เพิ่มระยะห่างหลังลายเซ็น
-        
-        # ผู้รับ (กึ่งกลาง)
-        receiver_text = f"ผู้รับ  {receiver_name}"
-        img_receiver = draw_text_img(receiver_text, size=font_size, bold=False)
+
+        current_y += max(sign_height, img_sign_text.height) + line_spacing
+
+        # ผู้รับ (กึ่งกลาง - ใช้ภาพที่สร้างไว้แล้ว)
         paste_at_position(img_receiver, center_x_frame - img_receiver.width//2, current_y)
-        current_y += other_line_spacing
-        
-        # วันที่ (กึ่งกลาง)
-        date_text = f"วันที่ {date}"
-        img_date = draw_text_img(date_text, size=font_size, bold=False)
+        current_y += img_receiver.height + line_spacing
+
+        # วันที่ (กึ่งกลาง - ใช้ภาพที่สร้างไว้แล้ว)
         paste_at_position(img_date, center_x_frame - img_date.width//2, current_y)
 
         # ส่งไฟล์กลับ
@@ -1875,35 +1858,56 @@ def add_signature_receive():
 
                 return img
 
-            # คำนวณจำนวนบรรทัด (ไม่ใช้ wrap_text แล้ว)
+            # สร้างข้อความทั้งหมดก่อนเพื่อคำนวณความสูงจริง
             font_size = 16
-            first_line_spacing = font_size
-            other_line_spacing = font_size - 4
+            text_max_width = stamp_width - 20
 
-            total_lines = 1  # เรียน ผอ.
-            total_lines += 1  # เรื่อง + summary
-            total_lines += 1  # เห็นควรมอบ + group_name
-            total_lines += 1  # ลงชื่อ + ลายเซ็น
-            total_lines += 1  # ผู้รับ
-            total_lines += 1  # วันที่
+            # สร้างภาพข้อความทั้งหมดก่อน
+            text1 = "เรียน ผอ. ศกศ.เขต ๖ จ.ลพบุรี"
+            img1 = draw_text_img(text1, size=font_size, bold=True, max_width=text_max_width)
 
-            # คำนวณความสูง
+            subject_text = f"เรื่อง {summary}"
+            img_subject = draw_text_img(subject_text, size=font_size, bold=False, max_width=text_max_width)
+
+            assign_text = f"เห็นควรมอบ {group_name}"
+            img_assign = draw_text_img(assign_text, size=font_size, bold=False, max_width=text_max_width)
+
+            sign_img_temp = Image.open(sign_file)
+            sign_height = 30
+            ratio = sign_height / sign_img_temp.height
+            sign_width = int(sign_img_temp.width * ratio)
+            sign_img = sign_img_temp.resize((sign_width, sign_height), Image.LANCZOS)
+
+            sign_text = "ลงชื่อ"
+            img_sign_text = draw_text_img(sign_text, size=font_size, bold=False)
+
+            receiver_text_str = f"ผู้รับ  {receiver_name}"
+            img_receiver = draw_text_img(receiver_text_str, size=font_size, bold=False)
+
+            date_text_str = f"วันที่ {date}"
+            img_date = draw_text_img(date_text_str, size=font_size, bold=False)
+
+            # คำนวณความสูงจริง
             padding_top = 8
             padding_bottom = 8
-            signature_space = 18
-            spacing_before_signature = 5
-            spacing_after_signature = 8
+            line_spacing = 2
 
-            text_height = first_line_spacing + (total_lines - 1) * other_line_spacing
-            calculated_height = (padding_top + text_height + spacing_before_signature +
-                               signature_space + spacing_after_signature + padding_bottom)
-            stamp_height = int(calculated_height)
+            total_height = padding_top
+            total_height += img1.height + line_spacing
+            total_height += img_subject.height + line_spacing
+            total_height += 2
+            total_height += img_assign.height + line_spacing
+            total_height += 12
+            total_height += max(sign_height, img_sign_text.height) + line_spacing
+            total_height += img_receiver.height + line_spacing
+            total_height += img_date.height + line_spacing
+            total_height += padding_bottom
+
+            stamp_height = int(total_height)
 
             # คำนวณตำแหน่งกรอบ (มุมซ้ายล่าง)
             center_x = margin + stamp_width//2
             center_y = page_h - margin - stamp_height//2
-
-            print(f"[DEBUG] Stamp position: center_x={center_x}, center_y={center_y}, height={stamp_height}")
 
             # วาดกรอบตรา
             box_left = center_x - stamp_width//2
@@ -1921,43 +1925,27 @@ def add_signature_receive():
                 img.save(bio, format='PNG')
                 page.insert_image(rect, stream=bio.getvalue())
 
-            # วาดข้อความในตรา
-            current_y = box_top + 8
-            text_max_width = stamp_width - 20  # เว้นขอบซ้าย-ขวา 10 px
+            # วาดข้อความในตรา (ใช้ภาพที่สร้างไว้แล้ว)
+            current_y = box_top + padding_top
 
             # เรียน ผอ.
-            text1 = "เรียน ผอ. ศกศ.เขต ๖ จ.ลพบุรี"
-            img1 = draw_text_img(text1, size=font_size, bold=True, max_width=text_max_width)
             paste_at_position(img1, box_left + 10, current_y)
-            current_y += first_line_spacing
+            current_y += img1.height + line_spacing
 
-            # เรื่อง + summary (วาดทั้งบรรทัดไม่แยก)
-            subject_text = f"เรื่อง {summary}"
-            img_subject = draw_text_img(subject_text, size=font_size, bold=False, max_width=text_max_width)
+            # เรื่อง + summary
             paste_at_position(img_subject, box_left + 10, current_y)
-            current_y += img_subject.height + 2  # ใช้ความสูงจริงของภาพ
+            current_y += img_subject.height + line_spacing
 
             current_y += 2
 
-            # เห็นควรมอบ (วาดทั้งบรรทัดไม่แยก)
-            assign_text = f"เห็นควรมอบ {group_name}"
-            img_assign = draw_text_img(assign_text, size=font_size, bold=False, max_width=text_max_width)
+            # เห็นควรมอบ + group_name
             paste_at_position(img_assign, box_left + 10, current_y)
-            current_y += img_assign.height + 2  # ใช้ความสูงจริงของภาพ
+            current_y += img_assign.height + line_spacing
 
             current_y += 12
 
-            # ลายเซ็น
-            sign_img = Image.open(sign_file)
-            sign_height = 30
-            ratio = sign_height / sign_img.height
-            sign_width = int(sign_img.width * ratio)
-            sign_img = sign_img.resize((sign_width, sign_height), Image.LANCZOS)
-
+            # ลายเซ็น (ใช้ภาพที่สร้างไว้แล้ว)
             center_x_frame = box_left + stamp_width//2
-
-            sign_text = "ลงชื่อ"
-            img_sign_text = draw_text_img(sign_text, size=font_size, bold=False)
 
             total_width = img_sign_text.width + 5 + sign_width
             start_x = center_x_frame - total_width//2
@@ -1966,20 +1954,14 @@ def add_signature_receive():
             paste_at_position(img_sign_text, start_x, sign_y)
             paste_at_position(sign_img, start_x + img_sign_text.width + 5, sign_y)
 
-            current_y += 18
+            current_y += max(sign_height, img_sign_text.height) + line_spacing
 
-            # ผู้รับ
-            receiver_text = f"ผู้รับ  {receiver_name}"
-            img_receiver = draw_text_img(receiver_text, size=font_size, bold=False)
+            # ผู้รับ (ใช้ภาพที่สร้างไว้แล้ว)
             paste_at_position(img_receiver, center_x_frame - img_receiver.width//2, current_y)
-            current_y += other_line_spacing
+            current_y += img_receiver.height + line_spacing
 
-            # วันที่
-            date_text = f"วันที่ {date}"
-            img_date = draw_text_img(date_text, size=font_size, bold=False)
+            # วันที่ (ใช้ภาพที่สร้างไว้แล้ว)
             paste_at_position(img_date, center_x_frame - img_date.width//2, current_y)
-
-            print("[DEBUG] Stamp summary added successfully")
 
         # บันทึกและส่งไฟล์กลับ
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_pdf:
