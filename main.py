@@ -1103,9 +1103,33 @@ def stamp_summary():
                 if text_width <= max_width - 2 * padding:
                     current_line = test_line
                 else:
-                    if current_line:
-                        lines.append(current_line)
-                    current_line = word
+                    # ถ้าคำยาวเกินไป ต้องตัดทีละตัวอักษร
+                    word_bbox = font.getbbox(word)
+                    word_width = word_bbox[2] - word_bbox[0]
+
+                    if word_width > max_width - 2 * padding:
+                        # คำยาวเกิน ต้องตัดทีละตัวอักษร
+                        if current_line:
+                            lines.append(current_line)
+                            current_line = ""
+
+                        # ตัดคำยาวทีละตัวอักษร
+                        for char in word:
+                            test_char = current_line + char
+                            char_bbox = font.getbbox(test_char)
+                            char_width = char_bbox[2] - char_bbox[0]
+
+                            if char_width <= max_width - 2 * padding:
+                                current_line += char
+                            else:
+                                if current_line:
+                                    lines.append(current_line)
+                                current_line = char
+                    else:
+                        # คำไม่ยาวเกิน แต่รวมกับบรรทัดปัจจุบันแล้วยาวเกิน
+                        if current_line:
+                            lines.append(current_line)
+                        current_line = word
 
             if current_line:
                 lines.append(current_line)
@@ -1334,7 +1358,7 @@ def stamp_summary():
         subject_text = f"เรื่อง {summary}"
         img_subject = draw_text_img(subject_text, size=font_size, bold=False, max_width=text_max_width)
         paste_at_position(img_subject, box_left + 10, current_y)
-        current_y += other_line_spacing
+        current_y += img_subject.height + 2  # ใช้ความสูงจริงของภาพ
 
         current_y += 2  # เว้นบรรทัดเล็กน้อย
 
@@ -1342,7 +1366,7 @@ def stamp_summary():
         assign_text = f"เห็นควรมอบ {group_name}"
         img_assign = draw_text_img(assign_text, size=font_size, bold=False, max_width=text_max_width)
         paste_at_position(img_assign, box_left + 10, current_y)
-        current_y += other_line_spacing
+        current_y += img_assign.height + 2  # ใช้ความสูงจริงของภาพ
         current_y += 12  # เพิ่มระยะห่างก่อนลายเซ็นมากขึ้น
         
         # ลายเซ็น
@@ -1793,9 +1817,33 @@ def add_signature_receive():
                     if text_width <= max_width - 2 * padding:
                         current_line = test_line
                     else:
-                        if current_line:
-                            lines.append(current_line)
-                        current_line = word
+                        # ถ้าคำยาวเกินไป ต้องตัดทีละตัวอักษร
+                        word_bbox = font.getbbox(word)
+                        word_width = word_bbox[2] - word_bbox[0]
+
+                        if word_width > max_width - 2 * padding:
+                            # คำยาวเกิน ต้องตัดทีละตัวอักษร
+                            if current_line:
+                                lines.append(current_line)
+                                current_line = ""
+
+                            # ตัดคำยาวทีละตัวอักษร
+                            for char in word:
+                                test_char = current_line + char
+                                char_bbox = font.getbbox(test_char)
+                                char_width = char_bbox[2] - char_bbox[0]
+
+                                if char_width <= max_width - 2 * padding:
+                                    current_line += char
+                                else:
+                                    if current_line:
+                                        lines.append(current_line)
+                                    current_line = char
+                        else:
+                            # คำไม่ยาวเกิน แต่รวมกับบรรทัดปัจจุบันแล้วยาวเกิน
+                            if current_line:
+                                lines.append(current_line)
+                            current_line = word
 
                 if current_line:
                     lines.append(current_line)
@@ -1887,7 +1935,7 @@ def add_signature_receive():
             subject_text = f"เรื่อง {summary}"
             img_subject = draw_text_img(subject_text, size=font_size, bold=False, max_width=text_max_width)
             paste_at_position(img_subject, box_left + 10, current_y)
-            current_y += other_line_spacing
+            current_y += img_subject.height + 2  # ใช้ความสูงจริงของภาพ
 
             current_y += 2
 
@@ -1895,7 +1943,7 @@ def add_signature_receive():
             assign_text = f"เห็นควรมอบ {group_name}"
             img_assign = draw_text_img(assign_text, size=font_size, bold=False, max_width=text_max_width)
             paste_at_position(img_assign, box_left + 10, current_y)
-            current_y += other_line_spacing
+            current_y += img_assign.height + 2  # ใช้ความสูงจริงของภาพ
 
             current_y += 12
 
