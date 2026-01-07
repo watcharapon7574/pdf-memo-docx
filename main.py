@@ -1336,8 +1336,8 @@ def stamp_summary():
 
         total_height = padding_top
         total_height += line_height  # เรียน ผอ.
-        total_height += img_subject.height + 2  # เรื่อง (ใช้ความสูงจริง)
-        total_height += img_assign.height + 2  # เห็นควรมอบ (ใช้ความสูงจริง)
+        total_height += img_subject.height - 4  # เรื่อง (หัก padding)
+        total_height += img_assign.height - 4  # เห็นควรมอบ (หัก padding)
         total_height += line_height + 2  # ลงชื่อ
         total_height += line_height  # ผู้รับ
         total_height += line_height  # วันที่
@@ -1376,12 +1376,12 @@ def stamp_summary():
 
         # เรื่อง + summary
         paste_at_position(img_subject, box_left + 10, current_y)
-        # ใช้ความสูงจริงของภาพแต่ปรับลดเล็กน้อย
-        current_y += img_subject.height + 2
+        # ใช้ความสูงจริงของภาพแต่หัก padding ออก (img มี padding 8px รวมอยู่)
+        current_y += img_subject.height - 4
 
         # เห็นควรมอบ + group_name
         paste_at_position(img_assign, box_left + 10, current_y)
-        current_y += img_assign.height + 2
+        current_y += img_assign.height - 4
 
         # ลายเซ็น (ใช้ภาพที่สร้างไว้แล้ว)
         center_x_frame = box_left + stamp_width//2
@@ -1926,8 +1926,8 @@ def add_signature_receive():
 
             total_height = padding_top
             total_height += line_height  # เรียน ผอ.
-            total_height += img_subject.height + 2  # เรื่อง (ใช้ความสูงจริง)
-            total_height += img_assign.height + 2  # เห็นควรมอบ (ใช้ความสูงจริง)
+            total_height += img_subject.height - 4  # เรื่อง (หัก padding)
+            total_height += img_assign.height - 4  # เห็นควรมอบ (หัก padding)
             total_height += line_height + 2  # ลงชื่อ
             total_height += line_height  # ผู้รับ
             total_height += line_height  # วันที่
@@ -1966,12 +1966,12 @@ def add_signature_receive():
 
             # เรื่อง + summary
             paste_at_position(img_subject, box_left + 10, current_y)
-            # ใช้ความสูงจริงของภาพแต่ปรับลดเล็กน้อย
-            current_y += img_subject.height + 2
+            # ใช้ความสูงจริงของภาพแต่หัก padding ออก (img มี padding 8px รวมอยู่)
+            current_y += img_subject.height - 4
 
             # เห็นควรมอบ + group_name
             paste_at_position(img_assign, box_left + 10, current_y)
-            current_y += img_assign.height + 2
+            current_y += img_assign.height - 4
 
             # ลายเซ็น (ใช้ภาพที่สร้างไว้แล้ว)
             center_x_frame = box_left + stamp_width//2
