@@ -1308,11 +1308,124 @@ def stamp_summary():
         text1 = "เรียน ผอ. ศกศ.เขต ๖ จ.ลพบุรี"
         img1 = draw_text_img(text1, size=font_size, bold=True, max_width=text_max_width)
 
-        subject_text = f"เรื่อง {summary}"
-        img_subject = draw_text_img(subject_text, size=font_size, bold=False, max_width=text_max_width)
+        # ฟังก์ชันสร้างภาพข้อความแบบ mixed (prefix ตัวหนา, content ตัวปกติ)
+        def draw_mixed_text_img(prefix, content, size=16, max_width=None):
+            from PIL import ImageFont, ImageDraw, Image
+            color_rgb = (2, 53, 139)
+            padding = 4
+            fixed_line_height = 14
 
-        assign_text = f"เห็นควรมอบ {group_name}"
-        img_assign = draw_text_img(assign_text, size=font_size, bold=False, max_width=text_max_width)
+            # แปลงเป็นเลขไทย
+            prefix = to_thai_digits(prefix)
+            content = to_thai_digits(content)
+
+            bold_font = ImageFont.truetype(bold_font_path, size)
+            normal_font = ImageFont.truetype(font_path, size)
+
+            # วาด prefix (ตัวหนา) + content (ตัวปกติ) โดย wrap ทั้งหมด
+            full_text = prefix + " " + content
+
+            # แยกข้อความเป็นบรรทัดตาม max_width (ใช้โค้ดเดียวกับ draw_text_img)
+            words = full_text.split(' ')
+            lines = []
+            current_line = ""
+
+            for i, word in enumerate(words):
+                # ใช้ bold font สำหรับคำแรก (prefix), normal font สำหรับที่เหลือ
+                test_font = bold_font if i == 0 else normal_font
+                test_line = current_line + (" " if current_line else "") + word
+                bbox = test_font.getbbox(test_line) if i == 0 else normal_font.getbbox(test_line)
+                text_width = bbox[2] - bbox[0]
+
+                if text_width <= max_width - 2 * padding:
+                    current_line = test_line
+                else:
+                    # กรณีพิเศษ: ถ้าบรรทัดปัจจุบันเป็น prefix
+                    if current_line == prefix:
+                        current_line = current_line + " "
+                        for char in word:
+                            test_char = current_line + char
+                            char_bbox = normal_font.getbbox(test_char)
+                            char_width = char_bbox[2] - char_bbox[0]
+
+                            if char_width <= max_width - 2 * padding:
+                                current_line = test_char
+                            else:
+                                if current_line:
+                                    lines.append(current_line)
+                                current_line = char
+                    else:
+                        word_bbox = normal_font.getbbox(word)
+                        word_width = word_bbox[2] - word_bbox[0]
+
+                        if word_width > max_width - 2 * padding:
+                            if current_line:
+                                lines.append(current_line)
+                                current_line = ""
+
+                            for char in word:
+                                test_char = current_line + char
+                                char_bbox = normal_font.getbbox(test_char)
+                                char_width = char_bbox[2] - char_bbox[0]
+
+                                if char_width <= max_width - 2 * padding:
+                                    current_line += char
+                                else:
+                                    if current_line:
+                                        lines.append(current_line)
+                                    current_line = char
+                        else:
+                            if current_line:
+                                lines.append(current_line)
+                            current_line = word
+
+            if current_line:
+                lines.append(current_line)
+
+            # คำนวณความกว้างสูงสุด
+            max_line_width = 0
+            for line in lines:
+                # ใช้ bold font สำหรับบรรทัดแรกที่มี prefix
+                if line.startswith(prefix):
+                    # วัดความกว้างแบบ mixed
+                    prefix_bbox = bold_font.getbbox(prefix)
+                    prefix_width = prefix_bbox[2] - prefix_bbox[0]
+                    rest = line[len(prefix):]
+                    rest_bbox = normal_font.getbbox(rest)
+                    rest_width = rest_bbox[2] - rest_bbox[0]
+                    line_width = prefix_width + rest_width
+                else:
+                    bbox = normal_font.getbbox(line)
+                    line_width = bbox[2] - bbox[0]
+                max_line_width = max(max_line_width, line_width)
+
+            img_width = max_line_width + 2 * padding
+            img_height = len(lines) * fixed_line_height + 2 * padding
+
+            # สร้างภาพและวาดข้อความ
+            img = Image.new("RGBA", (img_width, img_height), (255, 255, 255, 0))
+            draw = ImageDraw.Draw(img)
+
+            y = padding
+            for line in lines:
+                if line.startswith(prefix):
+                    # วาด prefix ตัวหนา
+                    draw.text((padding, y), prefix, font=bold_font, fill=color_rgb)
+                    prefix_bbox = bold_font.getbbox(prefix)
+                    prefix_width = prefix_bbox[2] - prefix_bbox[0]
+                    # วาดส่วนที่เหลือตัวปกติ
+                    rest = line[len(prefix):]
+                    draw.text((padding + prefix_width, y), rest, font=normal_font, fill=color_rgb)
+                else:
+                    # วาดตัวปกติทั้งหมด
+                    draw.text((padding, y), line, font=normal_font, fill=color_rgb)
+                y += fixed_line_height
+
+            img.line_count = len(lines)
+            return img
+
+        img_subject = draw_mixed_text_img("เรื่อง", summary, size=font_size, max_width=text_max_width)
+        img_assign = draw_mixed_text_img("เห็นควรมอบ", group_name, size=font_size, max_width=text_max_width)
 
         sign_img_temp = Image.open(sign_file)
         sign_height = 30
@@ -1898,11 +2011,117 @@ def add_signature_receive():
             text1 = "เรียน ผอ. ศกศ.เขต ๖ จ.ลพบุรี"
             img1 = draw_text_img(text1, size=font_size, bold=True, max_width=text_max_width)
 
-            subject_text = f"เรื่อง {summary}"
-            img_subject = draw_text_img(subject_text, size=font_size, bold=False, max_width=text_max_width)
+            # ฟังก์ชันสร้างภาพข้อความแบบ mixed (prefix ตัวหนา, content ตัวปกติ)
+            def draw_mixed_text_img(prefix, content, size=16, max_width=None):
+                from PIL import ImageFont, ImageDraw, Image
+                color_rgb = (2, 53, 139)
+                padding = 4
+                fixed_line_height = 14
 
-            assign_text = f"เห็นควรมอบ {group_name}"
-            img_assign = draw_text_img(assign_text, size=font_size, bold=False, max_width=text_max_width)
+                # แปลงเป็นเลขไทย
+                prefix = to_thai_digits(prefix)
+                content = to_thai_digits(content)
+
+                bold_font = ImageFont.truetype(bold_font_path, size)
+                normal_font = ImageFont.truetype(font_path, size)
+
+                # วาด prefix (ตัวหนา) + content (ตัวปกติ) โดย wrap ทั้งหมด
+                full_text = prefix + " " + content
+
+                # แยกข้อความเป็นบรรทัดตาม max_width
+                words = full_text.split(' ')
+                lines = []
+                current_line = ""
+
+                for i, word in enumerate(words):
+                    test_font = bold_font if i == 0 else normal_font
+                    test_line = current_line + (" " if current_line else "") + word
+                    bbox = test_font.getbbox(test_line) if i == 0 else normal_font.getbbox(test_line)
+                    text_width = bbox[2] - bbox[0]
+
+                    if text_width <= max_width - 2 * padding:
+                        current_line = test_line
+                    else:
+                        if current_line == prefix:
+                            current_line = current_line + " "
+                            for char in word:
+                                test_char = current_line + char
+                                char_bbox = normal_font.getbbox(test_char)
+                                char_width = char_bbox[2] - char_bbox[0]
+
+                                if char_width <= max_width - 2 * padding:
+                                    current_line = test_char
+                                else:
+                                    if current_line:
+                                        lines.append(current_line)
+                                    current_line = char
+                        else:
+                            word_bbox = normal_font.getbbox(word)
+                            word_width = word_bbox[2] - word_bbox[0]
+
+                            if word_width > max_width - 2 * padding:
+                                if current_line:
+                                    lines.append(current_line)
+                                    current_line = ""
+
+                                for char in word:
+                                    test_char = current_line + char
+                                    char_bbox = normal_font.getbbox(test_char)
+                                    char_width = char_bbox[2] - char_bbox[0]
+
+                                    if char_width <= max_width - 2 * padding:
+                                        current_line += char
+                                    else:
+                                        if current_line:
+                                            lines.append(current_line)
+                                        current_line = char
+                            else:
+                                if current_line:
+                                    lines.append(current_line)
+                                current_line = word
+
+                if current_line:
+                    lines.append(current_line)
+
+                # คำนวณความกว้างสูงสุด
+                max_line_width = 0
+                for line in lines:
+                    if line.startswith(prefix):
+                        prefix_bbox = bold_font.getbbox(prefix)
+                        prefix_width = prefix_bbox[2] - prefix_bbox[0]
+                        rest = line[len(prefix):]
+                        rest_bbox = normal_font.getbbox(rest)
+                        rest_width = rest_bbox[2] - rest_bbox[0]
+                        line_width = prefix_width + rest_width
+                    else:
+                        bbox = normal_font.getbbox(line)
+                        line_width = bbox[2] - bbox[0]
+                    max_line_width = max(max_line_width, line_width)
+
+                img_width = max_line_width + 2 * padding
+                img_height = len(lines) * fixed_line_height + 2 * padding
+
+                # สร้างภาพและวาดข้อความ
+                img = Image.new("RGBA", (img_width, img_height), (255, 255, 255, 0))
+                draw = ImageDraw.Draw(img)
+
+                y = padding
+                for line in lines:
+                    if line.startswith(prefix):
+                        draw.text((padding, y), prefix, font=bold_font, fill=color_rgb)
+                        prefix_bbox = bold_font.getbbox(prefix)
+                        prefix_width = prefix_bbox[2] - prefix_bbox[0]
+                        rest = line[len(prefix):]
+                        draw.text((padding + prefix_width, y), rest, font=normal_font, fill=color_rgb)
+                    else:
+                        draw.text((padding, y), line, font=normal_font, fill=color_rgb)
+                    y += fixed_line_height
+
+                img.line_count = len(lines)
+                return img
+
+            img_subject = draw_mixed_text_img("เรื่อง", summary, size=font_size, max_width=text_max_width)
+            img_assign = draw_mixed_text_img("เห็นควรมอบ", group_name, size=font_size, max_width=text_max_width)
 
             sign_img_temp = Image.open(sign_file)
             sign_height = 30
