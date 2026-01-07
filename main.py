@@ -1391,6 +1391,530 @@ def stamp_summary():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+@app.route('/add_signature_receive', methods=['POST'])
+def add_signature_receive():
+    """
+    รวมการทำงานของ /add_signature_v2 และ /stamp_summary ในครั้งเดียว
+
+    multipart/form-data:
+      - pdf: ไฟล์ PDF ต้นฉบับ
+      - signatures: JSON string สำหรับลายเซ็น (เหมือน /add_signature_v2)
+      - signature_files: ไฟล์รูปลายเซ็นต่างๆ
+      - sign_png: ไฟล์ลายเซ็นธุรการสำหรับตราสรุป (PNG โปร่งใส)
+      - summary_payload: JSON string สำหรับตราสรุป:
+        {
+          "summary": "เรื่อง การขออนุมัติโครงการ",
+          "group_name": "กลุ่มวิชาการ",
+          "receiver_name": "นายสมชาย รับผิดชอบ",
+          "date": "25 ก.ย. 67"
+        }
+    """
+    print("[DEBUG] /add_signature_receive API called")
+
+    # ฟังก์ชันวาดข้อความเป็นภาพ (v2)
+    def draw_text_image_v2(text, font_path, font_size=20, color=(2, 53, 139), scale=1, font_weight="regular"):
+        from PIL import ImageFont, ImageDraw, Image
+        # เลือก font ตาม font_weight
+        if font_weight == "bold":
+            font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew Bold.ttf")
+        big_font_size = font_size * scale
+        font = ImageFont.truetype(font_path, big_font_size)
+        padding = 4 * scale
+        lines = text.split('\n')
+        # ใช้ dummy image สำหรับวัด textbbox
+        dummy_img = Image.new("RGBA", (10, 10), (255, 255, 255, 0))
+        dummy_draw = ImageDraw.Draw(dummy_img)
+        line_sizes = []
+        for line in lines:
+            bbox = dummy_draw.textbbox((0, 0), line, font=font)
+            width = bbox[2] - bbox[0]
+            height = bbox[3] - bbox[1]
+            line_sizes.append((width, height, bbox))
+        max_width = max([w for w, h, _ in line_sizes]) + 2 * padding
+        total_height = sum([h for w, h, _ in line_sizes]) + 2 * padding + (len(lines)-1)*2*scale
+        img = Image.new("RGBA", (max_width, total_height), (255, 255, 255, 0))
+        draw = ImageDraw.Draw(img)
+        y = padding
+        for i, line in enumerate(lines):
+            w, h, bbox = line_sizes[i]
+            # ใช้การจัดข้อความแบบเดียวกับ draw_text_image (ไม่จัดกึ่งกลาง)
+            draw.text((padding, y - bbox[1]), line, font=font, fill=color)
+            y += h + 2*scale
+        return img
+
+    try:
+        # ===== ส่วนที่ 1: เพิ่มลายเซ็น (จาก /add_signature_v2) =====
+        DEFAULT_SIGNATURE_HEIGHT = 50
+        DEFAULT_COMMENT_FONT_SIZE = 18
+        font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew.ttf")
+        bold_font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew Bold.ttf")
+
+        if not os.path.isfile(font_path):
+            return jsonify({'error': f"Font file not found: {font_path}"}), 500
+
+        if 'pdf' not in request.files:
+            return jsonify({'error': 'No PDF file uploaded'}), 400
+        pdf_file = request.files['pdf']
+
+        if 'signatures' not in request.form:
+            return jsonify({'error': 'No signatures data'}), 400
+        signatures = json.loads(request.form['signatures'])
+
+        pdf_bytes = pdf_file.read()
+        pdf = fitz.open(stream=pdf_bytes, filetype="pdf")
+
+        from collections import defaultdict
+        sig_dict = defaultdict(list)
+        for sig in signatures:
+            page_number = int(sig.get('page', 0))
+            x = int(sig['x'])
+            y = int(sig['y'])
+            # รองรับ width/height สำหรับ center positioning
+            width = sig.get('width', 0)
+            height = sig.get('height', 0)
+
+            # ถ้าไม่มี width/height ให้ใช้ค่า default สำหรับ center positioning
+            if width == 0 and height == 0:
+                width = 120  # default width
+                height = 60  # default height
+                print(f"DEBUG: Using default dimensions {width}x{height} for signature at ({x}, {y})")
+
+            sig_dict[(page_number, x, y, width, height)].append(sig)
+
+        for (page_number, x, y, width, height), sigs in sig_dict.items():
+            page = pdf[page_number]
+
+            # Debug: แสดงข้อมูล page และพิกัด
+            page_rect = page.rect
+            print(f"DEBUG: Page {page_number} - Size: {page_rect.width}x{page_rect.height}")
+            print(f"DEBUG: Original coordinates: ({x}, {y})")
+            print(f"DEBUG: Signature dimensions: {width}x{height}")
+            print(f"DEBUG: Page bounds: x(0-{page_rect.width}), y(0-{page_rect.height})")
+
+            # ถ้ามี width/height แสดงว่าเป็น center positioning
+            is_center_positioning = width > 0 and height > 0
+
+            # Logic สำหรับปรับพิกัด Y ให้กลับกัน (บนเป็นล่าง ล่างเป็นบน)
+            if is_center_positioning:
+                # สำหรับ center positioning ใช้ height ที่กำหนดมา
+                adjusted_y = page_rect.height - y - height
+                # เลื่อนลงแนวดิ่งเท่ากับ height (60)
+                adjusted_y += height+30
+                print(f"DEBUG: Y-axis flip with center positioning: {y} -> {adjusted_y} (with +{height} offset)")
+                center_x = x
+                center_y = adjusted_y
+                print(f"DEBUG: Using center positioning - adjusted coordinates")
+                print(f"DEBUG: Center point: ({center_x}, {center_y})")
+                print(f"DEBUG: Bounding box: {width}x{height}")
+            else:
+                # สำหรับ top-left positioning ใช้ default signature height
+                signature_box_height = 60  # default height สำหรับการคำนวณ
+                adjusted_y = page_rect.height - y - signature_box_height
+                # เลื่อนลงแนวดิ่งเท่ากับ 60
+                adjusted_y += 60
+                print(f"DEBUG: Y-axis flip with top-left positioning: {y} -> {adjusted_y} (with +60 offset)")
+                center_x = x
+                center_y = adjusted_y
+                print(f"DEBUG: Using top-left positioning - adjusted coordinates")
+
+            current_y = center_y  # ใช้ค่า Y ที่ปรับแล้ว
+            # Check if any signature has 'lines' field
+            has_lines = any('lines' in sig for sig in sigs)
+            if has_lines:
+                # For each sig with lines, draw lines in order
+                for sig in sigs:
+                    lines = sig.get('lines')
+                    if not lines:
+                        # fallback to old logic for this sig
+                        if sig['type'] == 'text':
+                            text = to_thai_digits(sig.get('text', ''))
+                            font_size = 20 if sig.get('type') == 'comment' else DEFAULT_COMMENT_FONT_SIZE
+                            font_weight = "bold" if sig.get('type') == 'comment' else "regular"
+                            orig_color = sig.get('color', (2, 53, 139))
+                            if isinstance(orig_color, (list, tuple)):
+                                r = min(int(orig_color[0]*0.8), 255)
+                                g = min(int(orig_color[1]*0.8), 255)
+                                b = min(int(orig_color[2]*0.8), 255)
+                                color = (r, g, b)
+                            else:
+                                color = (2, 53, 139)
+                            img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1, font_weight=font_weight)
+                            img_byte_arr = io.BytesIO()
+                            img.save(img_byte_arr, format='PNG')
+                            # ใช้ center positioning ถ้ามี width/height
+                            if is_center_positioning:
+                                left_x = center_x - img.width // 2
+                                top_y = center_y - img.height // 2
+                            else:
+                                left_x = x
+                                top_y = current_y
+                            rect = fitz.Rect(left_x, top_y, left_x + img.width, top_y + img.height)
+                            print(f"DEBUG: Text '{text}' placed at rect: {rect} (center_pos: {is_center_positioning})")
+                            page.insert_image(rect, stream=img_byte_arr.getvalue())
+                            if not is_center_positioning:
+                                current_y += img.height
+                        elif sig['type'] == 'image':
+                            file_key = sig['file_key']
+                            if file_key not in request.files:
+                                continue
+                            signature_file = request.files[file_key]
+                            img = Image.open(signature_file)
+                            fixed_height = DEFAULT_SIGNATURE_HEIGHT
+                            ratio = fixed_height / img.height
+                            new_width = int(img.width * ratio)
+                            img = img.resize((new_width, fixed_height), resample=Image.LANCZOS)
+                            img_byte_arr = io.BytesIO()
+                            img.save(img_byte_arr, format='PNG')
+                            # ใช้ center positioning ถ้ามี width/height
+                            if is_center_positioning:
+                                left_x = center_x - new_width // 2
+                                top_y = center_y - fixed_height // 2
+                            else:
+                                left_x = x
+                                top_y = current_y
+                            rect = fitz.Rect(left_x, top_y, left_x + new_width, top_y + fixed_height)
+                            print(f"DEBUG: Image placed at rect: {rect} (center_pos: {is_center_positioning})")
+                            page.insert_image(rect, stream=img_byte_arr.getvalue())
+                            if not is_center_positioning:
+                                current_y += fixed_height
+                    else:
+                        # draw lines in order - รองรับ center positioning
+                        if is_center_positioning:
+                            # สำหรับ center positioning ให้เริ่มจากด้านบนของ bounding box
+                            current_y = center_y - height // 2
+
+                        for line in lines:
+                            line_type = line.get('type')
+                            if line_type == 'image':
+                                file_key = line.get('file_key')
+                                if file_key and file_key in request.files:
+                                    signature_file = request.files[file_key]
+                                    img = Image.open(signature_file)
+                                    fixed_height = DEFAULT_SIGNATURE_HEIGHT
+                                    ratio = fixed_height / img.height
+                                    new_width = int(img.width * ratio)
+                                    img = img.resize((new_width, fixed_height), resample=Image.LANCZOS)
+                                    img_byte_arr = io.BytesIO()
+                                    img.save(img_byte_arr, format='PNG')
+
+                                    if is_center_positioning:
+                                        left_x = center_x - new_width // 2
+                                        top_y = current_y
+                                        print(f"DEBUG: Image center positioning - center_x:{center_x}, new_width:{new_width}, left_x:{left_x}")
+                                        print(f"DEBUG: Expected position - should place image at left edge: {left_x}")
+                                    else:
+                                        left_x = x
+                                        top_y = current_y
+
+                                    rect = fitz.Rect(left_x, top_y, left_x + new_width, top_y + fixed_height)
+                                    print(f"DEBUG: Image rect: {rect}")
+                                    page.insert_image(rect, stream=img_byte_arr.getvalue())
+                                    current_y += fixed_height
+                            else:
+                                # For text types: 'comment', 'name', 'position', 'academic_rank', 'org_structure_role', 'timestamp'
+                                text_value = line.get('text') or line.get('value') or line.get('comment') or ''
+                                text = to_thai_digits(text_value)
+                                font_size = 20 if line_type == 'comment' else DEFAULT_COMMENT_FONT_SIZE
+                                font_weight = "bold" if line_type == 'comment' else "regular"
+                                orig_color = line.get('color', (2, 53, 139))
+                                if isinstance(orig_color, (list, tuple)):
+                                    r = min(int(orig_color[0]*0.8), 255)
+                                    g = min(int(orig_color[1]*0.8), 255)
+                                    b = min(int(orig_color[2]*0.8), 255)
+                                    color = (r, g, b)
+                                else:
+                                    color = (2, 53, 139)
+                                img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1, font_weight=font_weight)
+                                img_byte_arr = io.BytesIO()
+                                img.save(img_byte_arr, format='PNG')
+
+                                if is_center_positioning:
+                                    left_x = center_x - img.width // 2
+                                    top_y = current_y
+                                    print(f"DEBUG: Text center positioning - center_x:{center_x}, img.width:{img.width}, left_x:{left_x}")
+                                    print(f"DEBUG: Expected position - should place text at left edge: {left_x}")
+                                else:
+                                    left_x = x
+                                    top_y = current_y
+
+                                rect = fitz.Rect(left_x, top_y, left_x + img.width, top_y + img.height)
+                                print(f"DEBUG: Text '{text}' rect: {rect}")
+                                page.insert_image(rect, stream=img_byte_arr.getvalue())
+                                current_y += img.height
+            else:
+                # fallback to old logic
+                sigs_sorted = sorted(sigs, key=lambda s: 0 if s['type'] == 'text' else 1)
+                for sig in sigs_sorted:
+                    if sig['type'] == 'text':
+                        text = to_thai_digits(sig.get('text', ''))
+                        font_size = 20 if sig.get('type') == 'comment' else DEFAULT_COMMENT_FONT_SIZE
+                        font_weight = "bold" if sig.get('type') == 'comment' else "regular"
+                        orig_color = sig.get('color', (2, 53, 139))
+                        if isinstance(orig_color, (list, tuple)):
+                            r = min(int(orig_color[0]*0.8), 255)
+                            g = min(int(orig_color[1]*0.8), 255)
+                            b = min(int(orig_color[2]*0.8), 255)
+                            color = (r, g, b)
+                        else:
+                            color = (2, 53, 139)
+                        img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1, font_weight=font_weight)
+                        img_byte_arr = io.BytesIO()
+                        img.save(img_byte_arr, format='PNG')
+                        rect = fitz.Rect(x, current_y, x + img.width, current_y + img.height)
+                        page.insert_image(rect, stream=img_byte_arr.getvalue())
+                        current_y += img.height
+                    elif sig['type'] == 'image':
+                        file_key = sig['file_key']
+                        if file_key not in request.files:
+                            continue
+                        signature_file = request.files[file_key]
+                        img = Image.open(signature_file)
+                        fixed_height = DEFAULT_SIGNATURE_HEIGHT
+                        ratio = fixed_height / img.height
+                        new_width = int(img.width * ratio)
+                        img = img.resize((new_width, fixed_height), resample=Image.LANCZOS)
+                        img_byte_arr = io.BytesIO()
+                        img.save(img_byte_arr, format='PNG')
+                        rect = fitz.Rect(x, current_y, x + new_width, current_y + fixed_height)
+                        page.insert_image(rect, stream=img_byte_arr.getvalue())
+                        current_y += fixed_height
+
+        # ===== ส่วนที่ 2: เพิ่มตราสรุป (จาก /stamp_summary) =====
+        if 'summary_payload' in request.form and 'sign_png' in request.files:
+            print("[DEBUG] Adding stamp summary...")
+
+            sign_file = request.files['sign_png']
+            p = json.loads(request.form['summary_payload'])
+            summary = p.get('summary', '')
+            group_name = p.get('group_name', '')
+            receiver_name = p.get('receiver_name', '')
+            date = p.get('date', '')
+
+            print(f"[DEBUG] Summary data: summary={summary}, group={group_name}, receiver={receiver_name}, date={date}")
+
+            page = pdf[0]  # ใช้หน้าแรก
+
+            # เตรียมข้อมูลสำหรับคำนวณความสูง
+            page_w = page.rect.width
+            page_h = page.rect.height
+            margin = 30
+            stamp_width = 200
+
+            # ฟังก์ชันตัดข้อความ
+            def wrap_text(text, max_chars_approx):
+                thai_marks = set([
+                    '\u0E31', '\u0E34', '\u0E35', '\u0E36', '\u0E37', '\u0E38', '\u0E39', '\u0E3A',
+                    '\u0E47', '\u0E48', '\u0E49', '\u0E4A', '\u0E4B', '\u0E4C', '\u0E4D', '\u0E4E'
+                ])
+
+                def count_visible_chars(s):
+                    return len([c for c in s if c not in thai_marks])
+
+                def cut_at_visible_chars(s, max_visible):
+                    if count_visible_chars(s) <= max_visible:
+                        return s
+
+                    visible_count = 0
+                    for i, char in enumerate(s):
+                        if char not in thai_marks:
+                            visible_count += 1
+                            if visible_count >= max_visible:
+                                current_pos = i + 1
+                                for j in range(current_pos, len(s)):
+                                    if s[j] == ' ' or s[j] in '.!?,:;':
+                                        return s[:j]
+                                cut_pos = current_pos
+                                while cut_pos > 0 and s[cut_pos-1] in thai_marks:
+                                    cut_pos -= 1
+                                return s[:max(cut_pos, current_pos-5)]
+                    return s
+
+                lines = []
+                max_chars = 30
+
+                # ถ้าขึ้นต้นด้วย "เรื่อง "
+                if text.startswith("เรื่อง "):
+                    words = text.split(' ')
+                    if len(words) >= 2:
+                        first_group = f"เรื่อง {words[1]}"
+                        rest_text = ' '.join(words[2:])
+
+                        if count_visible_chars(first_group) > max_chars:
+                            text = text
+                        else:
+                            lines.append(first_group)
+                            text = rest_text
+
+                while count_visible_chars(text) > max_chars:
+                    cut_text = cut_at_visible_chars(text, max_chars)
+                    lines.append(cut_text)
+                    text = text[len(cut_text):]
+
+                if text.strip():
+                    lines.append(text)
+
+                return lines
+
+            # ฟังก์ชันวาดข้อความสำหรับตรา
+            def draw_text_img(text, size=16, bold=False):
+                fp = bold_font_path if bold else font_path
+                color_rgb = (2, 53, 139)
+                img = draw_text_image(to_thai_digits(text), fp, size, color_rgb, scale=1)
+                return img
+
+            # คำนวณจำนวนบรรทัด
+            font_size = 16
+            first_line_spacing = font_size
+            other_line_spacing = font_size - 4
+
+            header_text = "เรียน ผอ. ศกศ.เขต ๖ จ.ลพบุรี"
+            header_wrapped = wrap_text(header_text, 30)
+            total_lines = len(header_wrapped)
+
+            subject_text = f"เรื่อง {summary}"
+            subject_wrapped = wrap_text(subject_text, 30)
+            total_lines += len(subject_wrapped)
+
+            assign_text = f"เห็นควรมอบ {group_name}"
+            assign_wrapped = wrap_text(assign_text, 30)
+            total_lines += len(assign_wrapped)
+
+            total_lines += 3  # ลงชื่อ + ผู้รับ + วันที่
+
+            # คำนวณความสูง
+            padding_top = 8
+            padding_bottom = 8
+            signature_space = 18
+            spacing_before_signature = 5
+            spacing_after_signature = 8
+
+            text_height = first_line_spacing + (total_lines - 1) * other_line_spacing
+            calculated_height = (padding_top + text_height + spacing_before_signature +
+                               signature_space + spacing_after_signature + padding_bottom)
+            stamp_height = int(calculated_height)
+
+            # คำนวณตำแหน่งกรอบ (มุมซ้ายล่าง)
+            center_x = margin + stamp_width//2
+            center_y = page_h - margin - stamp_height//2
+
+            print(f"[DEBUG] Stamp position: center_x={center_x}, center_y={center_y}, height={stamp_height}")
+
+            # วาดกรอบตรา
+            box_left = center_x - stamp_width//2
+            box_top = center_y - stamp_height//2
+            box_right = center_x + stamp_width//2
+            box_bottom = center_y + stamp_height//2
+
+            box_rect = fitz.Rect(box_left, box_top, box_right, box_bottom)
+            box_color = (2/255, 53/255, 139/255)
+            page.draw_rect(box_rect, color=box_color, width=2)
+
+            def paste_at_position(img, x, y):
+                rect = fitz.Rect(x, y, x+img.width, y+img.height)
+                bio = io.BytesIO()
+                img.save(bio, format='PNG')
+                page.insert_image(rect, stream=bio.getvalue())
+
+            # วาดข้อความในตรา
+            current_y = box_top + 8
+
+            # เรียน ผอ.
+            text1 = "เรียน ผอ. ศกศ.เขต ๖ จ.ลพบุรี"
+            img1 = draw_text_img(text1, size=font_size, bold=True)
+            paste_at_position(img1, box_left + 10, current_y)
+            current_y += first_line_spacing
+
+            # เรื่อง + summary
+            subject_text = f"เรื่อง {summary}"
+            wrapped_lines = wrap_text(subject_text, 30)
+            for i, wrapped_line in enumerate(wrapped_lines):
+                if isinstance(wrapped_line, list):
+                    wrapped_line = ' '.join(wrapped_line)
+
+                if i == 0 and wrapped_line.startswith("เรื่อง "):
+                    subject_bold = draw_text_img("เรื่อง", size=font_size, bold=True)
+                    paste_at_position(subject_bold, box_left + 10, current_y)
+                    remaining_text = wrapped_line[5:]
+                    subject_normal = draw_text_img(remaining_text, size=font_size, bold=False)
+                    paste_at_position(subject_normal, box_left + 10 + subject_bold.width, current_y)
+                else:
+                    img_summary = draw_text_img(wrapped_line, size=font_size, bold=False)
+                    paste_at_position(img_summary, box_left + 10, current_y)
+
+                current_y += other_line_spacing
+
+            current_y += 2
+
+            # เห็นควรมอบ
+            assign_text = f"เห็นควรมอบ {group_name}"
+            assign_wrapped = wrap_text(assign_text, 30)
+            for i, assign_line in enumerate(assign_wrapped):
+                if isinstance(assign_line, list):
+                    assign_line = ' '.join(assign_line)
+
+                if i == 0 and assign_line.startswith("เห็นควรมอบ "):
+                    assign_bold = draw_text_img("เห็นควรมอบ", size=font_size, bold=True)
+                    paste_at_position(assign_bold, box_left + 10, current_y)
+                    remaining_text = assign_line[9:]
+                    assign_normal = draw_text_img(remaining_text, size=font_size, bold=False)
+                    paste_at_position(assign_normal, box_left + 10 + assign_bold.width, current_y)
+                else:
+                    img_assign = draw_text_img(assign_line, size=font_size, bold=False)
+                    paste_at_position(img_assign, box_left + 10, current_y)
+
+                current_y += other_line_spacing
+
+            current_y += 12
+
+            # ลายเซ็น
+            sign_img = Image.open(sign_file)
+            sign_height = 30
+            ratio = sign_height / sign_img.height
+            sign_width = int(sign_img.width * ratio)
+            sign_img = sign_img.resize((sign_width, sign_height), Image.LANCZOS)
+
+            center_x_frame = box_left + stamp_width//2
+
+            sign_text = "ลงชื่อ"
+            img_sign_text = draw_text_img(sign_text, size=font_size, bold=False)
+
+            total_width = img_sign_text.width + 5 + sign_width
+            start_x = center_x_frame - total_width//2
+
+            sign_y = current_y
+            paste_at_position(img_sign_text, start_x, sign_y)
+            paste_at_position(sign_img, start_x + img_sign_text.width + 5, sign_y)
+
+            current_y += 18
+
+            # ผู้รับ
+            receiver_text = f"ผู้รับ  {receiver_name}"
+            img_receiver = draw_text_img(receiver_text, size=font_size, bold=False)
+            paste_at_position(img_receiver, center_x_frame - img_receiver.width//2, current_y)
+            current_y += other_line_spacing
+
+            # วันที่
+            date_text = f"วันที่ {date}"
+            img_date = draw_text_img(date_text, size=font_size, bold=False)
+            paste_at_position(img_date, center_x_frame - img_date.width//2, current_y)
+
+            print("[DEBUG] Stamp summary added successfully")
+
+        # บันทึกและส่งไฟล์กลับ
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_pdf:
+            pdf.save(tmp_pdf.name)
+        pdf.close()
+
+        print("[DEBUG] PDF saved, sending response...")
+        response = send_file(tmp_pdf.name, mimetype="application/pdf", as_attachment=True, download_name="signed_receive.pdf")
+        response.headers['X-Debug'] = 'add_signature_receive_processed'
+        return response
+
+    except Exception as e:
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == "__main__":
     # สำหรับ Railway ต้องฟังที่ 0.0.0.0
     app.run(debug=True, host="0.0.0.0", port=5000)
