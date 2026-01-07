@@ -1165,7 +1165,8 @@ def stamp_summary():
                 total_height += line_height
 
             img_width = max_line_width + 2 * padding
-            img_height = total_height + 2 * padding + (len(lines) - 1) * 2
+            # ลดระยะห่างระหว่างบรรทัดเป็น 0
+            img_height = total_height + 2 * padding
 
             # สร้างภาพ
             img = Image.new("RGBA", (img_width, img_height), (255, 255, 255, 0))
@@ -1174,7 +1175,8 @@ def stamp_summary():
             y = padding
             for i, line in enumerate(lines):
                 draw.text((padding, y), line, font=font, fill=color_rgb)
-                y += line_heights[i] + 2
+                # ลดระยะห่างระหว่างบรรทัดจาก 2 เป็น 0
+                y += line_heights[i]
 
             # เก็บจำนวนบรรทัดไว้ใน attribute ของภาพ
             img.line_count = len(lines)
@@ -1336,14 +1338,10 @@ def stamp_summary():
         padding_bottom = 8
         line_height = 14
 
-        # นับจำนวนบรรทัดจริง
-        subject_lines = getattr(img_subject, 'line_count', 1)
-        assign_lines = getattr(img_assign, 'line_count', 1)
-
         total_height = padding_top
         total_height += line_height  # เรียน ผอ.
-        total_height += subject_lines * line_height  # เรื่อง (จำนวนบรรทัดจริง)
-        total_height += assign_lines * line_height  # เห็นควรมอบ (จำนวนบรรทัดจริง)
+        total_height += img_subject.height + 2  # เรื่อง (ใช้ความสูงจริง)
+        total_height += img_assign.height + 2  # เห็นควรมอบ (ใช้ความสูงจริง)
         total_height += line_height + 2  # ลงชื่อ
         total_height += line_height  # ผู้รับ
         total_height += line_height  # วันที่
@@ -1382,14 +1380,12 @@ def stamp_summary():
 
         # เรื่อง + summary
         paste_at_position(img_subject, box_left + 10, current_y)
-        # ใช้จำนวนบรรทัดจริง × line_height
-        subject_lines = getattr(img_subject, 'line_count', 1)
-        current_y += subject_lines * line_height
+        # ใช้ความสูงจริงของภาพ + ระยะห่างเล็กน้อย
+        current_y += img_subject.height + 2
 
         # เห็นควรมอบ + group_name
         paste_at_position(img_assign, box_left + 10, current_y)
-        assign_lines = getattr(img_assign, 'line_count', 1)
-        current_y += assign_lines * line_height
+        current_y += img_assign.height + 2
 
         # ลายเซ็น (ใช้ภาพที่สร้างไว้แล้ว)
         center_x_frame = box_left + stamp_width//2
@@ -1885,7 +1881,8 @@ def add_signature_receive():
                     total_height += line_height
 
                 img_width = max_line_width + 2 * padding
-                img_height = total_height + 2 * padding + (len(lines) - 1) * 2
+                # ลดระยะห่างระหว่างบรรทัดเป็น 0
+                img_height = total_height + 2 * padding
 
                 # สร้างภาพ
                 img = Image.new("RGBA", (img_width, img_height), (255, 255, 255, 0))
@@ -1894,7 +1891,8 @@ def add_signature_receive():
                 y = padding
                 for i, line in enumerate(lines):
                     draw.text((padding, y), line, font=font, fill=color_rgb)
-                    y += line_heights[i] + 2
+                    # ลดระยะห่างระหว่างบรรทัดจาก 2 เป็น 0
+                    y += line_heights[i]
 
                 # เก็บจำนวนบรรทัดไว้ใน attribute ของภาพ
                 img.line_count = len(lines)
@@ -1934,14 +1932,10 @@ def add_signature_receive():
             padding_bottom = 8
             line_height = 14
 
-            # นับจำนวนบรรทัดจริง
-            subject_lines = getattr(img_subject, 'line_count', 1)
-            assign_lines = getattr(img_assign, 'line_count', 1)
-
             total_height = padding_top
             total_height += line_height  # เรียน ผอ.
-            total_height += subject_lines * line_height  # เรื่อง (จำนวนบรรทัดจริง)
-            total_height += assign_lines * line_height  # เห็นควรมอบ (จำนวนบรรทัดจริง)
+            total_height += img_subject.height + 2  # เรื่อง (ใช้ความสูงจริง)
+            total_height += img_assign.height + 2  # เห็นควรมอบ (ใช้ความสูงจริง)
             total_height += line_height + 2  # ลงชื่อ
             total_height += line_height  # ผู้รับ
             total_height += line_height  # วันที่
@@ -1980,14 +1974,12 @@ def add_signature_receive():
 
             # เรื่อง + summary
             paste_at_position(img_subject, box_left + 10, current_y)
-            # ใช้จำนวนบรรทัดจริง × line_height
-            subject_lines = getattr(img_subject, 'line_count', 1)
-            current_y += subject_lines * line_height
+            # ใช้ความสูงจริงของภาพ + ระยะห่างเล็กน้อย
+            current_y += img_subject.height + 2
 
             # เห็นควรมอบ + group_name
             paste_at_position(img_assign, box_left + 10, current_y)
-            assign_lines = getattr(img_assign, 'line_count', 1)
-            current_y += assign_lines * line_height
+            current_y += img_assign.height + 2
 
             # ลายเซ็น (ใช้ภาพที่สร้างไว้แล้ว)
             center_x_frame = box_left + stamp_width//2
