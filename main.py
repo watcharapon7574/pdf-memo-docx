@@ -1103,34 +1103,45 @@ def stamp_summary():
                 if text_width <= max_width - 2 * padding:
                     current_line = test_line
                 else:
-                    # ถ้าคำยาวเกินไป ต้องตัดทีละตัวอักษร
-                    word_bbox = font.getbbox(word)
-                    word_width = word_bbox[2] - word_bbox[0]
-
-                    if word_width > max_width - 2 * padding:
-                        # คำยาวเกิน ต้องตัดทีละตัวอักษร
-                        if current_line:
-                            lines.append(current_line)
-                            current_line = ""
-
-                        # ตัดคำยาวทีละตัวอักษร
+                    # กรณีพิเศษ: ถ้าบรรทัดปัจจุบันคือ "เรื่อง" หรือ "เห็นควรมอบ" ต้องเก็บคำถัดไปไว้ด้วยเสมอ
+                    if current_line == "เรื่อง" or current_line == "เห็นควรมอบ":
+                        # บังคับรวม prefix กับคำแรกของข้อความ แล้วตัดทีละตัวอักษร
                         for char in word:
-                            test_char = current_line + char
+                            test_char = current_line + " " + char if not current_line.endswith(" ") else current_line + char
                             char_bbox = font.getbbox(test_char)
                             char_width = char_bbox[2] - char_bbox[0]
 
                             if char_width <= max_width - 2 * padding:
-                                current_line += char
+                                current_line = test_char
                             else:
                                 if current_line:
                                     lines.append(current_line)
                                 current_line = char
                     else:
-                        # คำไม่ยาวเกิน แต่รวมกับบรรทัดปัจจุบันแล้วยาวเกิน
-                        # กรณีพิเศษ: ถ้าบรรทัดปัจจุบันคือ "เรื่อง" หรือ "เห็นควรมอบ" ให้บังคับเพิ่มคำถัดไปเข้าไปด้วย
-                        if current_line == "เรื่อง" or current_line == "เห็นควรมอบ":
-                            current_line = test_line  # บังคับใส่คำถัดไปเข้าไป
+                        # ถ้าคำยาวเกินไป ต้องตัดทีละตัวอักษร
+                        word_bbox = font.getbbox(word)
+                        word_width = word_bbox[2] - word_bbox[0]
+
+                        if word_width > max_width - 2 * padding:
+                            # คำยาวเกิน ต้องตัดทีละตัวอักษร
+                            if current_line:
+                                lines.append(current_line)
+                                current_line = ""
+
+                            # ตัดคำยาวทีละตัวอักษร
+                            for char in word:
+                                test_char = current_line + char
+                                char_bbox = font.getbbox(test_char)
+                                char_width = char_bbox[2] - char_bbox[0]
+
+                                if char_width <= max_width - 2 * padding:
+                                    current_line += char
+                                else:
+                                    if current_line:
+                                        lines.append(current_line)
+                                    current_line = char
                         else:
+                            # คำไม่ยาวเกิน แต่รวมกับบรรทัดปัจจุบันแล้วยาวเกิน
                             if current_line:
                                 lines.append(current_line)
                             current_line = word
@@ -1807,34 +1818,45 @@ def add_signature_receive():
                     if text_width <= max_width - 2 * padding:
                         current_line = test_line
                     else:
-                        # ถ้าคำยาวเกินไป ต้องตัดทีละตัวอักษร
-                        word_bbox = font.getbbox(word)
-                        word_width = word_bbox[2] - word_bbox[0]
-
-                        if word_width > max_width - 2 * padding:
-                            # คำยาวเกิน ต้องตัดทีละตัวอักษร
-                            if current_line:
-                                lines.append(current_line)
-                                current_line = ""
-
-                            # ตัดคำยาวทีละตัวอักษร
+                        # กรณีพิเศษ: ถ้าบรรทัดปัจจุบันคือ "เรื่อง" หรือ "เห็นควรมอบ" ต้องเก็บคำถัดไปไว้ด้วยเสมอ
+                        if current_line == "เรื่อง" or current_line == "เห็นควรมอบ":
+                            # บังคับรวม prefix กับคำแรกของข้อความ แล้วตัดทีละตัวอักษร
                             for char in word:
-                                test_char = current_line + char
+                                test_char = current_line + " " + char if not current_line.endswith(" ") else current_line + char
                                 char_bbox = font.getbbox(test_char)
                                 char_width = char_bbox[2] - char_bbox[0]
 
                                 if char_width <= max_width - 2 * padding:
-                                    current_line += char
+                                    current_line = test_char
                                 else:
                                     if current_line:
                                         lines.append(current_line)
                                     current_line = char
                         else:
-                            # คำไม่ยาวเกิน แต่รวมกับบรรทัดปัจจุบันแล้วยาวเกิน
-                            # กรณีพิเศษ: ถ้าบรรทัดปัจจุบันคือ "เรื่อง" หรือ "เห็นควรมอบ" ให้บังคับเพิ่มคำถัดไปเข้าไปด้วย
-                            if current_line == "เรื่อง" or current_line == "เห็นควรมอบ":
-                                current_line = test_line  # บังคับใส่คำถัดไปเข้าไป
+                            # ถ้าคำยาวเกินไป ต้องตัดทีละตัวอักษร
+                            word_bbox = font.getbbox(word)
+                            word_width = word_bbox[2] - word_bbox[0]
+
+                            if word_width > max_width - 2 * padding:
+                                # คำยาวเกิน ต้องตัดทีละตัวอักษร
+                                if current_line:
+                                    lines.append(current_line)
+                                    current_line = ""
+
+                                # ตัดคำยาวทีละตัวอักษร
+                                for char in word:
+                                    test_char = current_line + char
+                                    char_bbox = font.getbbox(test_char)
+                                    char_width = char_bbox[2] - char_bbox[0]
+
+                                    if char_width <= max_width - 2 * padding:
+                                        current_line += char
+                                    else:
+                                        if current_line:
+                                            lines.append(current_line)
+                                        current_line = char
                             else:
+                                # คำไม่ยาวเกิน แต่รวมกับบรรทัดปัจจุบันแล้วยาวเกิน
                                 if current_line:
                                     lines.append(current_line)
                                 current_line = word
