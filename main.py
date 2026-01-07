@@ -1153,20 +1153,16 @@ def stamp_summary():
 
             # คำนวณขนาดภาพ
             max_line_width = 0
-            total_height = 0
-            line_heights = []
+            fixed_line_height = 14  # ใช้ความสูงคงที่
 
             for line in lines:
                 bbox = font.getbbox(line)
                 line_width = bbox[2] - bbox[0]
-                line_height = bbox[3] - bbox[1]
                 max_line_width = max(max_line_width, line_width)
-                line_heights.append(line_height)
-                total_height += line_height
 
             img_width = max_line_width + 2 * padding
-            # ลดระยะห่างระหว่างบรรทัดเป็น 0
-            img_height = total_height + 2 * padding
+            # ใช้ความสูงคงที่ 14px ต่อบรรทัด
+            img_height = len(lines) * fixed_line_height + 2 * padding
 
             # สร้างภาพ
             img = Image.new("RGBA", (img_width, img_height), (255, 255, 255, 0))
@@ -1175,8 +1171,8 @@ def stamp_summary():
             y = padding
             for i, line in enumerate(lines):
                 draw.text((padding, y), line, font=font, fill=color_rgb)
-                # ลดระยะห่างระหว่างบรรทัดจาก 2 เป็น 0
-                y += line_heights[i]
+                # ใช้ความสูงคงที่
+                y += fixed_line_height
 
             # เก็บจำนวนบรรทัดไว้ใน attribute ของภาพ
             img.line_count = len(lines)
@@ -1869,20 +1865,16 @@ def add_signature_receive():
 
                 # คำนวณขนาดภาพ
                 max_line_width = 0
-                total_height = 0
-                line_heights = []
+                fixed_line_height = 14  # ใช้ความสูงคงที่
 
                 for line in lines:
                     bbox = font.getbbox(line)
                     line_width = bbox[2] - bbox[0]
-                    line_height = bbox[3] - bbox[1]
                     max_line_width = max(max_line_width, line_width)
-                    line_heights.append(line_height)
-                    total_height += line_height
 
                 img_width = max_line_width + 2 * padding
-                # ลดระยะห่างระหว่างบรรทัดเป็น 0
-                img_height = total_height + 2 * padding
+                # ใช้ความสูงคงที่ 14px ต่อบรรทัด
+                img_height = len(lines) * fixed_line_height + 2 * padding
 
                 # สร้างภาพ
                 img = Image.new("RGBA", (img_width, img_height), (255, 255, 255, 0))
@@ -1891,8 +1883,8 @@ def add_signature_receive():
                 y = padding
                 for i, line in enumerate(lines):
                     draw.text((padding, y), line, font=font, fill=color_rgb)
-                    # ลดระยะห่างระหว่างบรรทัดจาก 2 เป็น 0
-                    y += line_heights[i]
+                    # ใช้ความสูงคงที่
+                    y += fixed_line_height
 
                 # เก็บจำนวนบรรทัดไว้ใน attribute ของภาพ
                 img.line_count = len(lines)
