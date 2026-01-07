@@ -1066,7 +1066,7 @@ def stamp_summary():
         page_w = page.rect.width
         page_h = page.rect.height
         margin = 30
-        stamp_width = 280  # เพิ่มจาก 200 เป็น 280 เพื่อให้กว้างขึ้นและข้อความไม่ถูกตัด
+        stamp_width = 200
         
         # ข้อมูลที่จะแสดงในตรา
         header_text = "เรียน ผอ. ศกศ.เขต ๖ จ.ลพบุรี"
@@ -1707,7 +1707,7 @@ def add_signature_receive():
             page_w = page.rect.width
             page_h = page.rect.height
             margin = 30
-            stamp_width = 280  # เพิ่มจาก 200 เป็น 280 เพื่อให้กว้างขึ้นและข้อความไม่ถูกตัด
+            stamp_width = 200
 
             # ฟังก์ชันตัดข้อความ
             def wrap_text(text, max_chars_approx):
