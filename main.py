@@ -414,16 +414,48 @@ def add_signature_v2():
                                 # For text types: 'comment', 'name', 'position', 'academic_rank', 'org_structure_role', 'timestamp'
                                 text_value = line.get('text') or line.get('value') or line.get('comment') or ''
 
+                                # ฟังก์ชันนับตัวอักษรที่มองเห็น (ไม่รวม tone marks, vowel marks)
+                                def count_visible_chars(s):
+                                    thai_marks = set([
+                                        '\u0E31', '\u0E34', '\u0E35', '\u0E36', '\u0E37',
+                                        '\u0E38', '\u0E39', '\u0E3A', '\u0E47', '\u0E48',
+                                        '\u0E49', '\u0E4A', '\u0E4B', '\u0E4C', '\u0E4D', '\u0E4E'
+                                    ])
+                                    return len([c for c in s if c not in thai_marks])
+
+                                # ฟังก์ชันตัดข้อความตามจำนวนตัวอักษรที่มองเห็น
+                                def wrap_by_visible_chars(text, max_chars=15):
+                                    if count_visible_chars(text) <= max_chars:
+                                        return [text]
+
+                                    lines = []
+                                    current = ""
+                                    for char in text:
+                                        test = current + char
+                                        if count_visible_chars(test) <= max_chars:
+                                            current = test
+                                        else:
+                                            if current:
+                                                lines.append(current)
+                                            current = char
+                                    if current:
+                                        lines.append(current)
+                                    return lines
+
                                 # ถ้าเป็น comment และมี - ให้แยกเป็นหลายบรรทัด
                                 if line_type == 'comment' and '-' in text_value:
                                     # แยกตาม - และเก็บ - ไว้ข้างหน้าแต่ละบรรทัด
                                     parts = text_value.split('-')
                                     # เอา parts ที่ไม่ว่างเปล่าออกมา
                                     text_lines = ['-' + part for part in parts if part.strip()]
-                                    # ถ้าขึ้นต้นด้วย - อยู่แล้ว (เช่น "-abc-def") parts[0] จะเป็น ''
-                                    if parts[0] == '':
-                                        text_lines = text_lines  # ถูกต้องแล้ว
-                                    text = '\n'.join([to_thai_digits(t) for t in text_lines])
+
+                                    # ตัดแต่ละบรรทัดให้ไม่เกิน 15 ตัวอักษรที่มองเห็น
+                                    wrapped_lines = []
+                                    for tline in text_lines:
+                                        wrapped = wrap_by_visible_chars(tline, max_chars=15)
+                                        wrapped_lines.extend(wrapped)
+
+                                    text = '\n'.join([to_thai_digits(t) for t in wrapped_lines])
                                 else:
                                     text = to_thai_digits(text_value)
                                 # ถ้า type == "comment" ให้ font_size=20, font_weight="bold"
@@ -1770,16 +1802,48 @@ def add_signature_receive():
                                 # For text types: 'comment', 'name', 'position', 'academic_rank', 'org_structure_role', 'timestamp'
                                 text_value = line.get('text') or line.get('value') or line.get('comment') or ''
 
+                                # ฟังก์ชันนับตัวอักษรที่มองเห็น (ไม่รวม tone marks, vowel marks)
+                                def count_visible_chars(s):
+                                    thai_marks = set([
+                                        '\u0E31', '\u0E34', '\u0E35', '\u0E36', '\u0E37',
+                                        '\u0E38', '\u0E39', '\u0E3A', '\u0E47', '\u0E48',
+                                        '\u0E49', '\u0E4A', '\u0E4B', '\u0E4C', '\u0E4D', '\u0E4E'
+                                    ])
+                                    return len([c for c in s if c not in thai_marks])
+
+                                # ฟังก์ชันตัดข้อความตามจำนวนตัวอักษรที่มองเห็น
+                                def wrap_by_visible_chars(text, max_chars=15):
+                                    if count_visible_chars(text) <= max_chars:
+                                        return [text]
+
+                                    lines = []
+                                    current = ""
+                                    for char in text:
+                                        test = current + char
+                                        if count_visible_chars(test) <= max_chars:
+                                            current = test
+                                        else:
+                                            if current:
+                                                lines.append(current)
+                                            current = char
+                                    if current:
+                                        lines.append(current)
+                                    return lines
+
                                 # ถ้าเป็น comment และมี - ให้แยกเป็นหลายบรรทัด
                                 if line_type == 'comment' and '-' in text_value:
                                     # แยกตาม - และเก็บ - ไว้ข้างหน้าแต่ละบรรทัด
                                     parts = text_value.split('-')
                                     # เอา parts ที่ไม่ว่างเปล่าออกมา
                                     text_lines = ['-' + part for part in parts if part.strip()]
-                                    # ถ้าขึ้นต้นด้วย - อยู่แล้ว (เช่น "-abc-def") parts[0] จะเป็น ''
-                                    if parts[0] == '':
-                                        text_lines = text_lines  # ถูกต้องแล้ว
-                                    text = '\n'.join([to_thai_digits(t) for t in text_lines])
+
+                                    # ตัดแต่ละบรรทัดให้ไม่เกิน 15 ตัวอักษรที่มองเห็น
+                                    wrapped_lines = []
+                                    for tline in text_lines:
+                                        wrapped = wrap_by_visible_chars(tline, max_chars=15)
+                                        wrapped_lines.extend(wrapped)
+
+                                    text = '\n'.join([to_thai_digits(t) for t in wrapped_lines])
                                 else:
                                     text = to_thai_digits(text_value)
                                 font_size = 20 if line_type == 'comment' else DEFAULT_COMMENT_FONT_SIZE
