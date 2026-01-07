@@ -1074,11 +1074,67 @@ def stamp_summary():
         receiver_text = f"ผู้รับ  {receiver_name}"
         date_text = f"วันที่ {date}"
         
-        # สร้างฟังก์ชันวาดข้อความ (ต้องสร้างก่อนเพื่อใช้คำนวณ)
-        def draw_text_img(text, size=16, bold=False):
+        # สร้างฟังก์ชันวาดข้อความ (รองรับการ wrap text)
+        def draw_text_img(text, size=16, bold=False, max_width=None):
+            from PIL import ImageFont, ImageDraw, Image
             fp = bold_font_path if bold else font_path
             color_rgb = (2, 53, 139)  # สีน้ำเงิน
-            img = draw_text_image(to_thai_digits(text), fp, size, color_rgb, scale=1)
+            text = to_thai_digits(text)
+
+            # ถ้าไม่มี max_width ใช้วิธีเดิม
+            if max_width is None:
+                img = draw_text_image(text, fp, size, color_rgb, scale=1)
+                return img
+
+            # มี max_width ให้ wrap text
+            font = ImageFont.truetype(fp, size)
+            padding = 4
+
+            # แยกข้อความเป็นบรรทัดตาม max_width
+            words = text.split(' ')
+            lines = []
+            current_line = ""
+
+            for word in words:
+                test_line = current_line + (" " if current_line else "") + word
+                bbox = font.getbbox(test_line)
+                text_width = bbox[2] - bbox[0]
+
+                if text_width <= max_width - 2 * padding:
+                    current_line = test_line
+                else:
+                    if current_line:
+                        lines.append(current_line)
+                    current_line = word
+
+            if current_line:
+                lines.append(current_line)
+
+            # คำนวณขนาดภาพ
+            max_line_width = 0
+            total_height = 0
+            line_heights = []
+
+            for line in lines:
+                bbox = font.getbbox(line)
+                line_width = bbox[2] - bbox[0]
+                line_height = bbox[3] - bbox[1]
+                max_line_width = max(max_line_width, line_width)
+                line_heights.append(line_height)
+                total_height += line_height
+
+            img_width = max_line_width + 2 * padding
+            img_height = total_height + 2 * padding + (len(lines) - 1) * 2
+
+            # สร้างภาพ
+            img = Image.new("RGBA", (img_width, img_height), (255, 255, 255, 0))
+            draw = ImageDraw.Draw(img)
+
+            y = padding
+            for i, line in enumerate(lines):
+                draw.text((padding, y), line, font=font, fill=color_rgb)
+                y += line_heights[i] + 2
+
             return img
 
         
@@ -1276,13 +1332,14 @@ def stamp_summary():
         first_line_spacing = font_size  # บรรทัดแรก = ขนาดฟอนต์ (16)
         other_line_spacing = font_size - 4  # บรรทัดอื่น = ขนาดฟอนต์ - 4 (12)
         current_y = box_top + 8  # เริ่มใกล้ขอบบนของกรอบมากขึ้น
-        
+        text_max_width = stamp_width - 20  # เว้นขอบซ้าย-ขวา 10 px
+
         # บรรทัดที่ 1: เรียน ผอ. ศกศ.เขต ๖ จ.ลพบุรี
         text1 = "เรียน ผอ. ศกศ.เขต ๖ จ.ลพบุรี"
-        img1 = draw_text_img(text1, size=font_size, bold=True)
+        img1 = draw_text_img(text1, size=font_size, bold=True, max_width=text_max_width)
         paste_at_position(img1, box_left + 10, current_y)
         current_y += first_line_spacing  # ใช้ระยะห่างบรรทัดแรก
-        
+
         # บรรทัดที่ 2: "เรื่อง" + summary (ใช้การตัดแบบเดิม 30 ตัวอักษร)
         subject_text = f"เรื่อง {summary}"
         wrapped_lines = wrap_text(subject_text, 30)
@@ -1290,26 +1347,26 @@ def stamp_summary():
             # Debug: ตรวจสอบ type
             if isinstance(wrapped_line, list):
                 wrapped_line = ' '.join(wrapped_line)
-            
+
             # วาดข้อความโดยทำให้คำ "เรื่อง" เป็นตัวหนาในบรรทัดแรก
             if i == 0 and wrapped_line.startswith("เรื่อง "):
                 # แยกคำ "เรื่อง" ออกมาเป็นตัวหนา
-                subject_bold = draw_text_img("เรื่อง", size=font_size, bold=True)
+                subject_bold = draw_text_img("เรื่อง", size=font_size, bold=True, max_width=text_max_width)
                 paste_at_position(subject_bold, box_left + 10, current_y)
-                
+
                 # วาดส่วนที่เหลือเป็นตัวปกติ
                 remaining_text = wrapped_line[5:]  # ตัดคำ "เรื่อง " ออก (5 ตัวอักษรรวมช่องว่าง)
-                subject_normal = draw_text_img(remaining_text, size=font_size, bold=False)
+                subject_normal = draw_text_img(remaining_text, size=font_size, bold=False, max_width=text_max_width - subject_bold.width)
                 paste_at_position(subject_normal, box_left + 10 + subject_bold.width, current_y)
             else:
                 # บรรทัดอื่นๆ ปกติ
-                img_summary = draw_text_img(wrapped_line, size=font_size, bold=False)
+                img_summary = draw_text_img(wrapped_line, size=font_size, bold=False, max_width=text_max_width)
                 paste_at_position(img_summary, box_left + 10, current_y)
-            
+
             current_y += other_line_spacing
-        
+
         current_y += 2  # เว้นบรรทัดเล็กน้อย
-        
+
         # บรรทัดมอบหมาย: "เห็นควรมอบ" + group_name (ใช้การตัดแบบเดิม 30 ตัวอักษร)
         assign_text = f"เห็นควรมอบ {group_name}"
         assign_wrapped = wrap_text(assign_text, 30)
@@ -1317,22 +1374,22 @@ def stamp_summary():
             # Debug: ตรวจสอบ type
             if isinstance(assign_line, list):
                 assign_line = ' '.join(assign_line)
-            
+
             # วาดข้อความโดยทำให้คำ "เห็นควรมอบ" เป็นตัวหนาในบรรทัดแรก
             if i == 0 and assign_line.startswith("เห็นควรมอบ "):
                 # แยกคำ "เห็นควรมอบ" ออกมาเป็นตัวหนา
-                assign_bold = draw_text_img("เห็นควรมอบ", size=font_size, bold=True)
+                assign_bold = draw_text_img("เห็นควรมอบ", size=font_size, bold=True, max_width=text_max_width)
                 paste_at_position(assign_bold, box_left + 10, current_y)
-                
+
                 # วาดส่วนที่เหลือเป็นตัวปกติ
                 remaining_text = assign_line[9:]  # ตัดคำ "เห็นควรมอบ " ออก (9 ตัวอักษรรวมช่องว่าง)
-                assign_normal = draw_text_img(remaining_text, size=font_size, bold=False)
+                assign_normal = draw_text_img(remaining_text, size=font_size, bold=False, max_width=text_max_width - assign_bold.width)
                 paste_at_position(assign_normal, box_left + 10 + assign_bold.width, current_y)
             else:
                 # บรรทัดอื่นๆ ปกติ
-                img_assign = draw_text_img(assign_line, size=font_size, bold=False)
+                img_assign = draw_text_img(assign_line, size=font_size, bold=False, max_width=text_max_width)
                 paste_at_position(img_assign, box_left + 10, current_y)
-            
+
             current_y += other_line_spacing
         current_y += 12  # เพิ่มระยะห่างก่อนลายเซ็นมากขึ้น
         
@@ -1755,11 +1812,67 @@ def add_signature_receive():
 
                 return lines
 
-            # ฟังก์ชันวาดข้อความสำหรับตรา
-            def draw_text_img(text, size=16, bold=False):
+            # ฟังก์ชันวาดข้อความสำหรับตรา (รองรับการ wrap text)
+            def draw_text_img(text, size=16, bold=False, max_width=None):
+                from PIL import ImageFont, ImageDraw, Image
                 fp = bold_font_path if bold else font_path
                 color_rgb = (2, 53, 139)
-                img = draw_text_image(to_thai_digits(text), fp, size, color_rgb, scale=1)
+                text = to_thai_digits(text)
+
+                # ถ้าไม่มี max_width ใช้วิธีเดิม
+                if max_width is None:
+                    img = draw_text_image(text, fp, size, color_rgb, scale=1)
+                    return img
+
+                # มี max_width ให้ wrap text
+                font = ImageFont.truetype(fp, size)
+                padding = 4
+
+                # แยกข้อความเป็นบรรทัดตาม max_width
+                words = text.split(' ')
+                lines = []
+                current_line = ""
+
+                for word in words:
+                    test_line = current_line + (" " if current_line else "") + word
+                    bbox = font.getbbox(test_line)
+                    text_width = bbox[2] - bbox[0]
+
+                    if text_width <= max_width - 2 * padding:
+                        current_line = test_line
+                    else:
+                        if current_line:
+                            lines.append(current_line)
+                        current_line = word
+
+                if current_line:
+                    lines.append(current_line)
+
+                # คำนวณขนาดภาพ
+                max_line_width = 0
+                total_height = 0
+                line_heights = []
+
+                for line in lines:
+                    bbox = font.getbbox(line)
+                    line_width = bbox[2] - bbox[0]
+                    line_height = bbox[3] - bbox[1]
+                    max_line_width = max(max_line_width, line_width)
+                    line_heights.append(line_height)
+                    total_height += line_height
+
+                img_width = max_line_width + 2 * padding
+                img_height = total_height + 2 * padding + (len(lines) - 1) * 2
+
+                # สร้างภาพ
+                img = Image.new("RGBA", (img_width, img_height), (255, 255, 255, 0))
+                draw = ImageDraw.Draw(img)
+
+                y = padding
+                for i, line in enumerate(lines):
+                    draw.text((padding, y), line, font=font, fill=color_rgb)
+                    y += line_heights[i] + 2
+
                 return img
 
             # คำนวณจำนวนบรรทัด
@@ -1817,10 +1930,11 @@ def add_signature_receive():
 
             # วาดข้อความในตรา
             current_y = box_top + 8
+            text_max_width = stamp_width - 20  # เว้นขอบซ้าย-ขวา 10 px
 
             # เรียน ผอ.
             text1 = "เรียน ผอ. ศกศ.เขต ๖ จ.ลพบุรี"
-            img1 = draw_text_img(text1, size=font_size, bold=True)
+            img1 = draw_text_img(text1, size=font_size, bold=True, max_width=text_max_width)
             paste_at_position(img1, box_left + 10, current_y)
             current_y += first_line_spacing
 
@@ -1832,13 +1946,13 @@ def add_signature_receive():
                     wrapped_line = ' '.join(wrapped_line)
 
                 if i == 0 and wrapped_line.startswith("เรื่อง "):
-                    subject_bold = draw_text_img("เรื่อง", size=font_size, bold=True)
+                    subject_bold = draw_text_img("เรื่อง", size=font_size, bold=True, max_width=text_max_width)
                     paste_at_position(subject_bold, box_left + 10, current_y)
                     remaining_text = wrapped_line[5:]
-                    subject_normal = draw_text_img(remaining_text, size=font_size, bold=False)
+                    subject_normal = draw_text_img(remaining_text, size=font_size, bold=False, max_width=text_max_width - subject_bold.width)
                     paste_at_position(subject_normal, box_left + 10 + subject_bold.width, current_y)
                 else:
-                    img_summary = draw_text_img(wrapped_line, size=font_size, bold=False)
+                    img_summary = draw_text_img(wrapped_line, size=font_size, bold=False, max_width=text_max_width)
                     paste_at_position(img_summary, box_left + 10, current_y)
 
                 current_y += other_line_spacing
@@ -1853,13 +1967,13 @@ def add_signature_receive():
                     assign_line = ' '.join(assign_line)
 
                 if i == 0 and assign_line.startswith("เห็นควรมอบ "):
-                    assign_bold = draw_text_img("เห็นควรมอบ", size=font_size, bold=True)
+                    assign_bold = draw_text_img("เห็นควรมอบ", size=font_size, bold=True, max_width=text_max_width)
                     paste_at_position(assign_bold, box_left + 10, current_y)
                     remaining_text = assign_line[9:]
-                    assign_normal = draw_text_img(remaining_text, size=font_size, bold=False)
+                    assign_normal = draw_text_img(remaining_text, size=font_size, bold=False, max_width=text_max_width - assign_bold.width)
                     paste_at_position(assign_normal, box_left + 10 + assign_bold.width, current_y)
                 else:
-                    img_assign = draw_text_img(assign_line, size=font_size, bold=False)
+                    img_assign = draw_text_img(assign_line, size=font_size, bold=False, max_width=text_max_width)
                     paste_at_position(img_assign, box_left + 10, current_y)
 
                 current_y += other_line_spacing
