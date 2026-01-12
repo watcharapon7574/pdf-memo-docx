@@ -1111,12 +1111,18 @@ def stamp_summary():
       - payload: JSON string:
         {
           "summary": "เรื่อง การขออนุมัติโครงการ",
-          "group_name": "กลุ่มวิชาการ", 
+          "group_name": "กลุ่มวิชาการ",
           "receiver_name": "นายสมชาย รับผิดชอบ",
-          "date": "25 ก.ย. 67"
+          "date": "25 ก.ย. 67",
+          "page": 0,  // optional, default = 0
+          "x": 100,   // optional, center x position
+          "y": 200,   // optional, center y position
+          "width": 200,  // optional, stamp width (for positioning)
+          "height": 150  // optional, stamp height (for positioning)
         }
-    
-    ตราจะวาดที่มุมซ้ายล่างของกระดาษ
+
+    ถ้าไม่ระบุ x, y จะวาดที่มุมซ้ายล่าง (default)
+    ถ้าระบุ x, y จะใช้เป็น center position แบบเดียวกับลายเซ็น
     """
     print("[DEBUG] /stamp_summary API called")
     try:
@@ -1131,19 +1137,27 @@ def stamp_summary():
         # อ่านข้อมูล
         pdf_file = request.files['pdf']
         sign_file = request.files['sign_png']
-        
+
         p = json.loads(request.form['payload'])
         summary = p.get('summary', '')
-        group_name = p.get('group_name', '') 
+        group_name = p.get('group_name', '')
         receiver_name = p.get('receiver_name', '')
         date = p.get('date', '')
-        
+
+        # รองรับการระบุตำแหน่ง
+        page_number = int(p.get('page', 0))
+        pos_x = p.get('x', None)  # center x
+        pos_y = p.get('y', None)  # center y
+        pos_width = p.get('width', None)  # width for positioning
+        pos_height = p.get('height', None)  # height for positioning
+
         print(f"[DEBUG] Data: summary={summary}, group={group_name}, receiver={receiver_name}, date={date}")
+        print(f"[DEBUG] Position: page={page_number}, x={pos_x}, y={pos_y}, width={pos_width}, height={pos_height}")
 
         # เปิด PDF
         pdf_bytes = pdf_file.read()
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-        page = doc[0]  # ใช้หน้าแรก
+        page = doc[page_number]  # ใช้หน้าที่ระบุ
 
         # ฟอนต์ไทย
         font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew.ttf")
@@ -1546,16 +1560,29 @@ def stamp_summary():
         total_height += padding_bottom
 
         stamp_height = int(total_height)
-        
+
         # คำนวณตำแหน่งกรอบ
-        center_x = margin + stamp_width//2
-        center_y = page_h - margin - stamp_height//2
+        # ถ้าระบุ x, y ให้ใช้เป็น center position แบบเดียวกับลายเซ็น
+        if pos_x is not None and pos_y is not None:
+            # ใช้ center positioning (x, y เป็นจุดกึ่งกลาง)
+            center_x = int(pos_x)
+            center_y = int(pos_y)
+            print(f"[DEBUG] Using custom position: center=({center_x}, {center_y})")
+        else:
+            # ใช้ default position (มุมซ้ายล่าง)
+            margin = 30
+            center_x = margin + stamp_width//2
+            center_y = page_h - margin - stamp_height//2
+            print(f"[DEBUG] Using default position (bottom-left): center=({center_x}, {center_y})")
 
         # วาดกรอบตรา
         box_left = center_x - stamp_width//2
         box_top = center_y - stamp_height//2
         box_right = center_x + stamp_width//2
         box_bottom = center_y + stamp_height//2
+
+        print(f"[DEBUG] Stamp box: left={box_left}, top={box_top}, right={box_right}, bottom={box_bottom}")
+        print(f"[DEBUG] Stamp dimensions: {stamp_width}x{stamp_height}")
 
         box_rect = fitz.Rect(box_left, box_top, box_right, box_bottom)
         box_color = (2/255, 53/255, 139/255)
