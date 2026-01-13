@@ -1565,9 +1565,18 @@ def stamp_summary():
         # ถ้าระบุ x, y ให้ใช้เป็น center position แบบเดียวกับลายเซ็น
         if pos_x is not None and pos_y is not None:
             # ใช้ center positioning (x, y เป็นจุดกึ่งกลาง)
+            # ต้องแปลง Y-axis จาก "บนเป็นล่าง" ให้เป็น "ล่างเป็นบน" แบบเดียวกับ add_signature_v2
             center_x = int(pos_x)
-            center_y = int(pos_y)
-            print(f"[DEBUG] Using custom position: center=({center_x}, {center_y})")
+
+            # Logic การแปลง Y แบบเดียวกับ add_signature_v2:
+            # adjusted_y = page_height - y - height + height + 30
+            # ซึ่งเท่ากับ: adjusted_y = page_height - y + 30
+            adjusted_y = page_h - pos_y - stamp_height
+            adjusted_y += stamp_height + 30
+            center_y = adjusted_y
+
+            print(f"[DEBUG] Using custom position: original y={pos_y}, adjusted y={center_y}")
+            print(f"[DEBUG] Y-axis flip: {pos_y} -> {center_y} (page_height={page_h}, stamp_height={stamp_height})")
         else:
             # ใช้ default position (มุมซ้ายล่าง)
             margin = 30
