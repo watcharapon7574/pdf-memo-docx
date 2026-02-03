@@ -246,6 +246,8 @@ def add_signature_v2():
     try:
         DEFAULT_SIGNATURE_HEIGHT = 50
         DEFAULT_COMMENT_FONT_SIZE = 18
+        TEXT_LINE_SPACING = 22  # ระยะห่างคงที่สำหรับบรรทัดข้อความ (comment, name, etc.)
+        AFTER_IMAGE_SPACING = 50  # ระยะห่างหลังรูปลายเซ็น
         font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew.ttf")
         if not os.path.isfile(font_path):
             return jsonify({'error': f"Font file not found: {font_path}"}), 500
@@ -352,7 +354,7 @@ def add_signature_v2():
                             print(f"DEBUG: Text '{text}' placed at rect: {rect} (center_pos: {is_center_positioning})")
                             page.insert_image(rect, stream=img_byte_arr.getvalue())
                             if not is_center_positioning:
-                                current_y += img.height
+                                current_y += TEXT_LINE_SPACING  # ใช้ spacing คงที่แทน img.height
                         elif sig['type'] == 'image':
                             file_key = sig['file_key']
                             if file_key not in request.files:
@@ -376,7 +378,7 @@ def add_signature_v2():
                             print(f"DEBUG: Image placed at rect: {rect} (center_pos: {is_center_positioning})")
                             page.insert_image(rect, stream=img_byte_arr.getvalue())
                             if not is_center_positioning:
-                                current_y += fixed_height
+                                current_y += AFTER_IMAGE_SPACING  # ใช้ spacing คงที่แทน fixed_height
                     else:
                         # draw lines in order - รองรับ center positioning
                         if is_center_positioning:
@@ -405,11 +407,11 @@ def add_signature_v2():
                                     else:
                                         left_x = x
                                         top_y = current_y
-                                    
+
                                     rect = fitz.Rect(left_x, top_y, left_x + new_width, top_y + fixed_height)
                                     print(f"DEBUG: Image rect: {rect}")
                                     page.insert_image(rect, stream=img_byte_arr.getvalue())
-                                    current_y += fixed_height
+                                    current_y += AFTER_IMAGE_SPACING  # ใช้ spacing คงที่แทน fixed_height
                             else:
                                 # For text types: 'comment', 'name', 'position', 'academic_rank', 'org_structure_role', 'timestamp'
                                 text_value = line.get('text') or line.get('value') or line.get('comment') or ''
@@ -481,11 +483,11 @@ def add_signature_v2():
                                 else:
                                     left_x = x
                                     top_y = current_y
-                                
+
                                 rect = fitz.Rect(left_x, top_y, left_x + img.width, top_y + img.height)
                                 print(f"DEBUG: Text '{text}' rect: {rect}")
                                 page.insert_image(rect, stream=img_byte_arr.getvalue())
-                                current_y += img.height
+                                current_y += TEXT_LINE_SPACING  # ใช้ spacing คงที่แทน img.height
             else:
                 # fallback to old logic
                 sigs_sorted = sorted(sigs, key=lambda s: 0 if s['type'] == 'text' else 1)
@@ -508,7 +510,7 @@ def add_signature_v2():
                         img.save(img_byte_arr, format='PNG')
                         rect = fitz.Rect(x, current_y, x + img.width, current_y + img.height)
                         page.insert_image(rect, stream=img_byte_arr.getvalue())
-                        current_y += img.height
+                        current_y += TEXT_LINE_SPACING  # ใช้ spacing คงที่แทน img.height
                     elif sig['type'] == 'image':
                         file_key = sig['file_key']
                         if file_key not in request.files:
@@ -523,7 +525,7 @@ def add_signature_v2():
                         img.save(img_byte_arr, format='PNG')
                         rect = fitz.Rect(x, current_y, x + new_width, current_y + fixed_height)
                         page.insert_image(rect, stream=img_byte_arr.getvalue())
-                        current_y += fixed_height
+                        current_y += AFTER_IMAGE_SPACING  # ใช้ spacing คงที่แทน fixed_height
 
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_pdf:
             pdf.save(tmp_pdf.name)
