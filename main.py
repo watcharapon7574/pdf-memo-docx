@@ -223,25 +223,30 @@ def add_signature_v2():
         font = ImageFont.truetype(font_path, big_font_size)
         padding = 4 * scale
         lines = text.split('\n')
-        # ใช้ dummy image สำหรับวัด textbbox
+
+        # ใช้ fixed line height แทน bbox เพื่อหลีกเลี่ยงปัญหา tone marks ทำให้ความสูงไม่เท่ากัน
+        fixed_line_height = int(font_size * 1.2 * scale)
+
+        # วัดความกว้างเท่านั้น
         dummy_img = Image.new("RGBA", (10, 10), (255, 255, 255, 0))
         dummy_draw = ImageDraw.Draw(dummy_img)
-        line_sizes = []
+        line_widths = []
         for line in lines:
             bbox = dummy_draw.textbbox((0, 0), line, font=font)
             width = bbox[2] - bbox[0]
-            height = bbox[3] - bbox[1]
-            line_sizes.append((width, height, bbox))
-        max_width = max([w for w, h, _ in line_sizes]) + 2 * padding
-        total_height = sum([h for w, h, _ in line_sizes]) + 2 * padding + (len(lines)-1)*2*scale
+            line_widths.append(width)
+
+        max_width = max(line_widths) + 2 * padding
+        total_height = len(lines) * fixed_line_height + 2 * padding
+
         img = Image.new("RGBA", (max_width, total_height), (255, 255, 255, 0))
         draw = ImageDraw.Draw(img)
+
         y = padding
-        for i, line in enumerate(lines):
-            w, h, bbox = line_sizes[i]
-            # ใช้การจัดข้อความแบบเดียวกับ draw_text_image (ไม่จัดกึ่งกลาง)
-            draw.text((padding, y - bbox[1]), line, font=font, fill=color)
-            y += h + 2*scale
+        for line in lines:
+            draw.text((padding, y), line, font=font, fill=color)
+            y += fixed_line_height
+
         return img
     try:
         DEFAULT_SIGNATURE_HEIGHT = 50
@@ -1705,25 +1710,30 @@ def add_signature_receive():
         font = ImageFont.truetype(font_path, big_font_size)
         padding = 4 * scale
         lines = text.split('\n')
-        # ใช้ dummy image สำหรับวัด textbbox
+
+        # ใช้ fixed line height แทน bbox เพื่อหลีกเลี่ยงปัญหา tone marks ทำให้ความสูงไม่เท่ากัน
+        fixed_line_height = int(font_size * 1.2 * scale)
+
+        # วัดความกว้างเท่านั้น
         dummy_img = Image.new("RGBA", (10, 10), (255, 255, 255, 0))
         dummy_draw = ImageDraw.Draw(dummy_img)
-        line_sizes = []
+        line_widths = []
         for line in lines:
             bbox = dummy_draw.textbbox((0, 0), line, font=font)
             width = bbox[2] - bbox[0]
-            height = bbox[3] - bbox[1]
-            line_sizes.append((width, height, bbox))
-        max_width = max([w for w, h, _ in line_sizes]) + 2 * padding
-        total_height = sum([h for w, h, _ in line_sizes]) + 2 * padding + (len(lines)-1)*2*scale
+            line_widths.append(width)
+
+        max_width = max(line_widths) + 2 * padding
+        total_height = len(lines) * fixed_line_height + 2 * padding
+
         img = Image.new("RGBA", (max_width, total_height), (255, 255, 255, 0))
         draw = ImageDraw.Draw(img)
+
         y = padding
-        for i, line in enumerate(lines):
-            w, h, bbox = line_sizes[i]
-            # ใช้การจัดข้อความแบบเดียวกับ draw_text_image (ไม่จัดกึ่งกลาง)
-            draw.text((padding, y - bbox[1]), line, font=font, fill=color)
-            y += h + 2*scale
+        for line in lines:
+            draw.text((padding, y), line, font=font, fill=color)
+            y += fixed_line_height
+
         return img
 
     try:
