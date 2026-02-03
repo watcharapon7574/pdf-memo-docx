@@ -246,6 +246,7 @@ def add_signature_v2():
     try:
         DEFAULT_SIGNATURE_HEIGHT = 50
         DEFAULT_COMMENT_FONT_SIZE = 18
+        LINE_SPACING = 22  # ระยะห่างคงที่ระหว่างบรรทัดข้อความ (สำหรับ single-line text)
         font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew.ttf")
         if not os.path.isfile(font_path):
             return jsonify({'error': f"Font file not found: {font_path}"}), 500
@@ -352,7 +353,11 @@ def add_signature_v2():
                             print(f"DEBUG: Text '{text}' placed at rect: {rect} (center_pos: {is_center_positioning})")
                             page.insert_image(rect, stream=img_byte_arr.getvalue())
                             if not is_center_positioning:
-                                current_y += img.height + 4  # ใช้ความสูงจริง + spacing เล็กน้อย
+                                num_lines = text.count('\n') + 1
+                                if num_lines == 1:
+                                    current_y += LINE_SPACING
+                                else:
+                                    current_y += img.height + 4
                         elif sig['type'] == 'image':
                             file_key = sig['file_key']
                             if file_key not in request.files:
@@ -484,10 +489,14 @@ def add_signature_v2():
 
                                 rect = fitz.Rect(left_x, top_y, left_x + img.width, top_y + img.height)
                                 print(f"DEBUG: Text '{text}' rect: {rect}")
-                                print(f"DEBUG: Text has {text.count(chr(10)) + 1} lines, img.height={img.height}")
+                                num_lines = text.count('\n') + 1
+                                print(f"DEBUG: Text has {num_lines} lines, img.height={img.height}")
                                 page.insert_image(rect, stream=img_byte_arr.getvalue())
-                                # ใช้ความสูงจริงของ image + spacing เล็กน้อย
-                                current_y += img.height + 4
+                                # ถ้าเป็นบรรทัดเดียวใช้ fixed spacing, ถ้าหลายบรรทัดใช้ความสูงจริง
+                                if num_lines == 1:
+                                    current_y += LINE_SPACING
+                                else:
+                                    current_y += img.height + 4
             else:
                 # fallback to old logic
                 sigs_sorted = sorted(sigs, key=lambda s: 0 if s['type'] == 'text' else 1)
@@ -510,7 +519,11 @@ def add_signature_v2():
                         img.save(img_byte_arr, format='PNG')
                         rect = fitz.Rect(x, current_y, x + img.width, current_y + img.height)
                         page.insert_image(rect, stream=img_byte_arr.getvalue())
-                        current_y += img.height + 4  # ใช้ความสูงจริง + spacing เล็กน้อย
+                        num_lines = text.count('\n') + 1
+                        if num_lines == 1:
+                            current_y += LINE_SPACING
+                        else:
+                            current_y += img.height + 4
                     elif sig['type'] == 'image':
                         file_key = sig['file_key']
                         if file_key not in request.files:
