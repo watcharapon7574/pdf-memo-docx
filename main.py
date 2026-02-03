@@ -499,11 +499,11 @@ def add_signature_v2():
                                 num_lines = text.count('\n') + 1
                                 print(f"DEBUG: Text has {num_lines} lines, img.height={img.height}")
                                 page.insert_image(rect, stream=img_byte_arr.getvalue())
-                                # ถ้าเป็นบรรทัดเดียวใช้ fixed spacing, ถ้าหลายบรรทัดใช้ความสูงจริง
+                                # ถ้าเป็นบรรทัดเดียวใช้ fixed spacing, ถ้าหลายบรรทัดใช้ความสูงจริง x 0.8 (ลด 20%)
                                 if num_lines == 1:
                                     current_y += LINE_SPACING
                                 else:
-                                    current_y += img.height + 4
+                                    current_y += int((img.height + 4) * 0.8)
             else:
                 # fallback to old logic
                 sigs_sorted = sorted(sigs, key=lambda s: 0 if s['type'] == 'text' else 1)
