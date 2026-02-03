@@ -424,7 +424,7 @@ def add_signature_v2():
                                     return len([c for c in s if c not in thai_marks])
 
                                 # ฟังก์ชันตัดข้อความตามจำนวนตัวอักษรที่มองเห็น
-                                def wrap_by_visible_chars(text, max_chars=15):
+                                def wrap_by_visible_chars(text, max_chars=30):
                                     if count_visible_chars(text) <= max_chars:
                                         return [text]
 
@@ -449,10 +449,10 @@ def add_signature_v2():
                                     # เอา parts ที่ไม่ว่างเปล่าออกมา
                                     text_lines = ['-' + part for part in parts if part.strip()]
 
-                                    # ตัดแต่ละบรรทัดให้ไม่เกิน 15 ตัวอักษรที่มองเห็น
+                                    # ตัดแต่ละบรรทัดให้ไม่เกิน 30 ตัวอักษรที่มองเห็น
                                     wrapped_lines = []
                                     for tline in text_lines:
-                                        wrapped = wrap_by_visible_chars(tline, max_chars=15)
+                                        wrapped = wrap_by_visible_chars(tline, max_chars=30)
                                         wrapped_lines.extend(wrapped)
 
                                     text = '\n'.join([to_thai_digits(t) for t in wrapped_lines])
@@ -770,7 +770,7 @@ def generate_2in1_memo():
                                         return len([c for c in s if c not in thai_marks])
 
                                     # ฟังก์ชันตัดข้อความตามจำนวนตัวอักษรที่มองเห็น
-                                    def wrap_by_visible_chars(text, max_chars=15):
+                                    def wrap_by_visible_chars(text, max_chars=30):
                                         if count_visible_chars(text) <= max_chars:
                                             return [text]
 
@@ -1895,7 +1895,7 @@ def add_signature_receive():
                                     return len([c for c in s if c not in thai_marks])
 
                                 # ฟังก์ชันตัดข้อความตามจำนวนตัวอักษรที่มองเห็น
-                                def wrap_by_visible_chars(text, max_chars=15):
+                                def wrap_by_visible_chars(text, max_chars=30):
                                     if count_visible_chars(text) <= max_chars:
                                         return [text]
 
@@ -1920,10 +1920,10 @@ def add_signature_receive():
                                     # เอา parts ที่ไม่ว่างเปล่าออกมา
                                     text_lines = ['-' + part for part in parts if part.strip()]
 
-                                    # ตัดแต่ละบรรทัดให้ไม่เกิน 15 ตัวอักษรที่มองเห็น
+                                    # ตัดแต่ละบรรทัดให้ไม่เกิน 30 ตัวอักษรที่มองเห็น
                                     wrapped_lines = []
                                     for tline in text_lines:
-                                        wrapped = wrap_by_visible_chars(tline, max_chars=15)
+                                        wrapped = wrap_by_visible_chars(tline, max_chars=30)
                                         wrapped_lines.extend(wrapped)
 
                                     text = '\n'.join([to_thai_digits(t) for t in wrapped_lines])
