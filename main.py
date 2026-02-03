@@ -244,7 +244,9 @@ def add_signature_v2():
 
         y = padding
         for line in lines:
-            draw.text((padding, y), line, font=font, fill=color)
+            # ใช้ anchor="la" (left-ascender) เพื่อยึดตำแหน่งที่ ascender line
+            # ทำให้ทุกบรรทัดวางที่ตำแหน่งเดียวกัน ไม่ว่าจะมี tone marks หรือไม่
+            draw.text((padding, y), line, font=font, fill=color, anchor="la")
             y += fixed_line_height
 
         return img
@@ -1731,7 +1733,9 @@ def add_signature_receive():
 
         y = padding
         for line in lines:
-            draw.text((padding, y), line, font=font, fill=color)
+            # ใช้ anchor="la" (left-ascender) เพื่อยึดตำแหน่งที่ ascender line
+            # ทำให้ทุกบรรทัดวางที่ตำแหน่งเดียวกัน ไม่ว่าจะมี tone marks หรือไม่
+            draw.text((padding, y), line, font=font, fill=color, anchor="la")
             y += fixed_line_height
 
         return img
