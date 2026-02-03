@@ -246,7 +246,7 @@ def add_signature_v2():
     try:
         DEFAULT_SIGNATURE_HEIGHT = 50
         DEFAULT_COMMENT_FONT_SIZE = 18
-        LINE_SPACING = 22  # ระยะห่างคงที่ระหว่างบรรทัดข้อความ (สำหรับ single-line text)
+        LINE_SPACING = 20  # ระยะห่างคงที่ระหว่างบรรทัดข้อความ (สำหรับ single-line text)
         font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew.ttf")
         if not os.path.isfile(font_path):
             return jsonify({'error': f"Font file not found: {font_path}"}), 500
