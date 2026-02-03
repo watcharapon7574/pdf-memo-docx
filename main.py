@@ -214,7 +214,7 @@ def add_signature():
 @app.route('/add_signature_v2', methods=['POST'])
 def add_signature_v2():
     # --- ฟังก์ชันวาดข้อความเป็นภาพ (v2) ---
-    def draw_text_image_v2(text, font_path, font_size=20, color=(2, 53, 139), scale=1, font_weight="regular"):
+    def draw_text_image_v2(text, font_path, font_size=20, color=(2, 53, 139), scale=1, font_weight="regular", line_height_ratio=1.2):
         from PIL import ImageFont, ImageDraw, Image
         # เลือก font ตาม font_weight
         if font_weight == "bold":
@@ -225,7 +225,8 @@ def add_signature_v2():
         lines = text.split('\n')
 
         # ใช้ fixed line height แทน bbox เพื่อหลีกเลี่ยงปัญหา tone marks ทำให้ความสูงไม่เท่ากัน
-        fixed_line_height = int(font_size * 1.2 * scale)
+        # รองรับการปรับ line_height_ratio (default 1.2, สำหรับ comment ใช้ 0.96 = 1.2 * 0.8)
+        fixed_line_height = int(font_size * line_height_ratio * scale)
 
         # วัดความกว้างเท่านั้น
         dummy_img = Image.new("RGBA", (10, 10), (255, 255, 255, 0))
@@ -335,9 +336,10 @@ def add_signature_v2():
                         # fallback to old logic for this sig
                         if sig['type'] == 'text':
                             text = to_thai_digits(sig.get('text', ''))
-                            # ถ้า type == "comment" ให้ font_size=20, font_weight="bold"
+                            # ถ้า type == "comment" ให้ font_size=20, font_weight="bold", line_height_ratio=0.96
                             font_size = 20 if sig.get('type') == 'comment' else DEFAULT_COMMENT_FONT_SIZE
                             font_weight = "bold" if sig.get('type') == 'comment' else "regular"
+                            line_height_ratio = 0.96 if sig.get('type') == 'comment' else 1.2
                             orig_color = sig.get('color', (2, 53, 139))
                             if isinstance(orig_color, (list, tuple)):
                                 r = min(int(orig_color[0]*0.8), 255)
@@ -346,7 +348,7 @@ def add_signature_v2():
                                 color = (r, g, b)
                             else:
                                 color = (2, 53, 139)
-                            img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1, font_weight=font_weight)
+                            img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1, font_weight=font_weight, line_height_ratio=line_height_ratio)
                             img_byte_arr = io.BytesIO()
                             img.save(img_byte_arr, format='PNG')
                             # ใช้ center positioning ถ้ามี width/height
@@ -470,9 +472,10 @@ def add_signature_v2():
                                     text = '\n'.join([to_thai_digits(t) for t in wrapped_lines])
                                 else:
                                     text = to_thai_digits(text_value)
-                                # ถ้า type == "comment" ให้ font_size=20, font_weight="bold"
+                                # ถ้า type == "comment" ให้ font_size=20, font_weight="bold", line_height_ratio=0.96 (ลด 20%)
                                 font_size = 20 if line_type == 'comment' else DEFAULT_COMMENT_FONT_SIZE
                                 font_weight = "bold" if line_type == 'comment' else "regular"
+                                line_height_ratio = 0.96 if line_type == 'comment' else 1.2  # comment ใช้ 0.96 = 1.2 * 0.8
                                 orig_color = line.get('color', (2, 53, 139))
                                 if isinstance(orig_color, (list, tuple)):
                                     r = min(int(orig_color[0]*0.8), 255)
@@ -481,7 +484,7 @@ def add_signature_v2():
                                     color = (r, g, b)
                                 else:
                                     color = (2, 53, 139)
-                                img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1, font_weight=font_weight)
+                                img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1, font_weight=font_weight, line_height_ratio=line_height_ratio)
                                 img_byte_arr = io.BytesIO()
                                 img.save(img_byte_arr, format='PNG')
                                 
@@ -499,20 +502,21 @@ def add_signature_v2():
                                 num_lines = text.count('\n') + 1
                                 print(f"DEBUG: Text has {num_lines} lines, img.height={img.height}")
                                 page.insert_image(rect, stream=img_byte_arr.getvalue())
-                                # ถ้าเป็นบรรทัดเดียวใช้ fixed spacing, ถ้าหลายบรรทัดใช้ความสูงจริง x 0.8 (ลด 20%)
+                                # ถ้าเป็นบรรทัดเดียวใช้ fixed spacing, ถ้าหลายบรรทัดใช้ความสูงจริง
                                 if num_lines == 1:
                                     current_y += LINE_SPACING
                                 else:
-                                    current_y += int((img.height + 4) * 0.8)
+                                    current_y += img.height + 4
             else:
                 # fallback to old logic
                 sigs_sorted = sorted(sigs, key=lambda s: 0 if s['type'] == 'text' else 1)
                 for sig in sigs_sorted:
                     if sig['type'] == 'text':
                         text = to_thai_digits(sig.get('text', ''))
-                        # ถ้า type == "comment" ให้ font_size=20, font_weight="bold"
+                        # ถ้า type == "comment" ให้ font_size=20, font_weight="bold", line_height_ratio=0.96
                         font_size = 20 if sig.get('type') == 'comment' else DEFAULT_COMMENT_FONT_SIZE
                         font_weight = "bold" if sig.get('type') == 'comment' else "regular"
+                        line_height_ratio = 0.96 if sig.get('type') == 'comment' else 1.2
                         orig_color = sig.get('color', (2, 53, 139))
                         if isinstance(orig_color, (list, tuple)):
                             r = min(int(orig_color[0]*0.8), 255)
@@ -521,7 +525,7 @@ def add_signature_v2():
                             color = (r, g, b)
                         else:
                             color = (2, 53, 139)
-                        img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1, font_weight=font_weight)
+                        img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1, font_weight=font_weight, line_height_ratio=line_height_ratio)
                         img_byte_arr = io.BytesIO()
                         img.save(img_byte_arr, format='PNG')
                         rect = fitz.Rect(x, current_y, x + img.width, current_y + img.height)
