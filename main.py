@@ -376,7 +376,7 @@ def add_signature_v2():
                             print(f"DEBUG: Image placed at rect: {rect} (center_pos: {is_center_positioning})")
                             page.insert_image(rect, stream=img_byte_arr.getvalue())
                             if not is_center_positioning:
-                                current_y += fixed_height + 4  # ใช้ความสูงจริง + spacing เล็กน้อย
+                                current_y += fixed_height - 10  # ลดระยะห่างให้ใกล้กับข้อความด้านล่าง
                     else:
                         # draw lines in order - รองรับ center positioning
                         if is_center_positioning:
@@ -409,7 +409,7 @@ def add_signature_v2():
                                     rect = fitz.Rect(left_x, top_y, left_x + new_width, top_y + fixed_height)
                                     print(f"DEBUG: Image rect: {rect}")
                                     page.insert_image(rect, stream=img_byte_arr.getvalue())
-                                    current_y += fixed_height + 4  # ใช้ความสูงจริง + spacing เล็กน้อย
+                                    current_y += fixed_height - 10  # ลดระยะห่างให้ใกล้กับข้อความด้านล่าง
                             else:
                                 # For text types: 'comment', 'name', 'position', 'academic_rank', 'org_structure_role', 'timestamp'
                                 text_value = line.get('text') or line.get('value') or line.get('comment') or ''
@@ -525,7 +525,7 @@ def add_signature_v2():
                         img.save(img_byte_arr, format='PNG')
                         rect = fitz.Rect(x, current_y, x + new_width, current_y + fixed_height)
                         page.insert_image(rect, stream=img_byte_arr.getvalue())
-                        current_y += fixed_height + 4  # ใช้ความสูงจริง + spacing เล็กน้อย
+                        current_y += fixed_height - 10  # ลดระยะห่างให้ใกล้กับข้อความด้านล่าง
 
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_pdf:
             pdf.save(tmp_pdf.name)
