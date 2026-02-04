@@ -102,9 +102,11 @@ def generate_pdf():
                         i += 1
                     continue
                 elif proposal_text[i] == '?' and i > 0:
-                    # เจอ ? = ขึ้นบรรทัดใหม่ + เติม space ให้เต็มบรรทัด
+                    # เจอ ? = ขึ้นบรรทัดใหม่ + เติม non-breaking space ให้เต็มบรรทัด
                     if current_line.strip():
-                        # เติม non-breaking space ให้เต็มบรรทัด
+                        # 1. ลบช่องว่างท้ายบรรทัดก่อน
+                        current_line = current_line.rstrip()
+                        # 2. เติม non-breaking space ให้เต็มบรรทัด
                         line_length = len(current_line)
                         if line_length < TARGET_LINE_LENGTH:
                             padding = '\u00A0' * (TARGET_LINE_LENGTH - line_length)
@@ -665,9 +667,11 @@ def generate_2in1_memo():
                         i += 1
                     continue
                 elif proposal_text[i] == '?' and i > 0:
-                    # เจอ ? = ขึ้นบรรทัดใหม่ + เติม space ให้เต็มบรรทัด
+                    # เจอ ? = ขึ้นบรรทัดใหม่ + เติม non-breaking space ให้เต็มบรรทัด
                     if current_line.strip():
-                        # เติม non-breaking space ให้เต็มบรรทัด
+                        # 1. ลบช่องว่างท้ายบรรทัดก่อน
+                        current_line = current_line.rstrip()
+                        # 2. เติม non-breaking space ให้เต็มบรรทัด
                         line_length = len(current_line)
                         if line_length < TARGET_LINE_LENGTH:
                             padding = '\u00A0' * (TARGET_LINE_LENGTH - line_length)
