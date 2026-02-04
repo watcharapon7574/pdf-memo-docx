@@ -128,9 +128,14 @@ def generate_pdf():
         doc = DocxTemplate(template_path)
         doc.render(data)
 
-        # บังคับ justify ทุก paragraph
+        # บังคับ justify ทุก paragraph (รวมใน table ด้วย)
         for paragraph in doc.paragraphs:
             paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        for table in doc.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    for paragraph in cell.paragraphs:
+                        paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
         with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_docx:
             doc.save(tmp_docx.name)
@@ -654,9 +659,14 @@ def generate_2in1_memo():
         doc = DocxTemplate(template_path)
         doc.render(data)
 
-        # บังคับ justify ทุก paragraph
+        # บังคับ justify ทุก paragraph (รวมใน table ด้วย)
         for paragraph in doc.paragraphs:
             paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        for table in doc.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    for paragraph in cell.paragraphs:
+                        paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
         with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_docx:
             doc.save(tmp_docx.name)
