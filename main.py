@@ -84,28 +84,32 @@ def generate_pdf():
 
         # จัดรูปแบบ proposal:
         # ! = ขึ้นบรรทัดใหม่ + indent + "- "
-        # ? = ขึ้นบรรทัดใหม่ + ทำให้ทั้ง proposal ไม่ justify (ใช้ marker \u200B)
-        has_no_justify = False  # flag บอกว่ามี ? หรือไม่
+        # ? = ขึ้นบรรทัดใหม่ + บรรทัดก่อนหน้าไม่ justify (ใช้ marker \u200B)
         if 'proposal' in data and data['proposal']:
             proposal_text = data['proposal']
             lines = []
             current_line = ""
+            mark_previous_no_justify = False  # flag สำหรับ mark บรรทัดก่อนหน้า
             i = 0
             while i < len(proposal_text):
                 if proposal_text[i] == '!' and i > 0:
                     # เจอ ! = ขึ้นบรรทัดใหม่ + indent + "- "
                     if current_line.strip():
-                        lines.append(current_line.rstrip())
+                        line_text = current_line.rstrip()
+                        if mark_previous_no_justify:
+                            line_text = '\u200B' + line_text
+                            mark_previous_no_justify = False
+                        lines.append(line_text)
                     current_line = "          - "
                     i += 1
                     while i < len(proposal_text) and proposal_text[i] == ' ':
                         i += 1
                     continue
                 elif proposal_text[i] == '?' and i > 0:
-                    # เจอ ? = ขึ้นบรรทัดใหม่ + mark ว่าไม่ต้อง justify
-                    has_no_justify = True
+                    # เจอ ? = ขึ้นบรรทัดใหม่ + บรรทัดนี้ไม่ justify
                     if current_line.strip():
-                        lines.append(current_line.rstrip())
+                        # เติม marker ที่บรรทัดนี้ (บรรทัดก่อน ?)
+                        lines.append('\u200B' + current_line.rstrip())
                     current_line = ""
                     i += 1
                     while i < len(proposal_text) and proposal_text[i] == ' ':
@@ -116,20 +120,22 @@ def generate_pdf():
                     i += 1
 
             if current_line.strip():
-                lines.append(current_line.rstrip())
+                line_text = current_line.rstrip()
+                if mark_previous_no_justify:
+                    line_text = '\u200B' + line_text
+                lines.append(line_text)
 
-            # รวมผลลัพธ์
+            # รวมผลลัพธ์เป็น list สำหรับ template loop
             if lines:
                 if lines[0].startswith('! '):
                     lines[0] = '          - ' + lines[0][2:]
                 elif lines[0].startswith('!'):
                     lines[0] = '          - ' + lines[0][1:]
-                # ถ้ามี ? ให้เติม marker ที่ต้นข้อความเพื่อบอกว่าไม่ต้อง justify
-                if has_no_justify:
-                    lines[0] = '\u200B' + lines[0]
-                data['proposal'] = '\n'.join(lines)
+                data['proposal_lines'] = lines
             else:
-                data['proposal'] = proposal_text
+                data['proposal_lines'] = [proposal_text]
+        else:
+            data['proposal_lines'] = []
 
         # แปลงเลขใน dict เป็นเลขไทย
         def convert_dict(d):
@@ -657,28 +663,31 @@ def generate_2in1_memo():
 
         # จัดรูปแบบ proposal:
         # ! = ขึ้นบรรทัดใหม่ + indent + "- "
-        # ? = ขึ้นบรรทัดใหม่ + ทำให้ทั้ง proposal ไม่ justify (ใช้ marker \u200B)
-        has_no_justify = False  # flag บอกว่ามี ? หรือไม่
+        # ? = ขึ้นบรรทัดใหม่ + บรรทัดก่อนหน้าไม่ justify (ใช้ marker \u200B)
         if 'proposal' in data and data['proposal']:
             proposal_text = data['proposal']
             lines = []
             current_line = ""
+            mark_previous_no_justify = False
             i = 0
             while i < len(proposal_text):
                 if proposal_text[i] == '!' and i > 0:
                     # เจอ ! = ขึ้นบรรทัดใหม่ + indent + "- "
                     if current_line.strip():
-                        lines.append(current_line.rstrip())
+                        line_text = current_line.rstrip()
+                        if mark_previous_no_justify:
+                            line_text = '\u200B' + line_text
+                            mark_previous_no_justify = False
+                        lines.append(line_text)
                     current_line = "          - "
                     i += 1
                     while i < len(proposal_text) and proposal_text[i] == ' ':
                         i += 1
                     continue
                 elif proposal_text[i] == '?' and i > 0:
-                    # เจอ ? = ขึ้นบรรทัดใหม่ + mark ว่าไม่ต้อง justify
-                    has_no_justify = True
+                    # เจอ ? = ขึ้นบรรทัดใหม่ + บรรทัดนี้ไม่ justify
                     if current_line.strip():
-                        lines.append(current_line.rstrip())
+                        lines.append('\u200B' + current_line.rstrip())
                     current_line = ""
                     i += 1
                     while i < len(proposal_text) and proposal_text[i] == ' ':
@@ -689,19 +698,22 @@ def generate_2in1_memo():
                     i += 1
 
             if current_line.strip():
-                lines.append(current_line.rstrip())
+                line_text = current_line.rstrip()
+                if mark_previous_no_justify:
+                    line_text = '\u200B' + line_text
+                lines.append(line_text)
 
+            # รวมผลลัพธ์เป็น list สำหรับ template loop
             if lines:
                 if lines[0].startswith('! '):
                     lines[0] = '          - ' + lines[0][2:]
                 elif lines[0].startswith('!'):
                     lines[0] = '          - ' + lines[0][1:]
-                # ถ้ามี ? ให้เติม marker ที่ต้นข้อความเพื่อบอกว่าไม่ต้อง justify
-                if has_no_justify:
-                    lines[0] = '\u200B' + lines[0]
-                data['proposal'] = '\n'.join(lines)
+                data['proposal_lines'] = lines
             else:
-                data['proposal'] = proposal_text
+                data['proposal_lines'] = [proposal_text]
+        else:
+            data['proposal_lines'] = []
 
         # แปลงเลขใน dict เป็นเลขไทย
         def convert_dict(d):
