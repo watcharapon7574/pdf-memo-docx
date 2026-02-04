@@ -75,22 +75,36 @@ def generate_pdf():
             return jsonify({'error': f"Missing fields: {', '.join(missing)}"}), 400
         # =====================
 
-        # จัดรูปแบบ proposal ให้มี indent สำหรับเครื่องหมาย ! (แสดงผลเป็น -)
+        # จัดรูปแบบ proposal:
+        # ! = ขึ้นบรรทัดใหม่ + indent + "- "
+        # ? = ขึ้นบรรทัดใหม่ + บรรทัดก่อนหน้าไม่ justify (ใช้ \u200B เป็น marker)
         if 'proposal' in data and data['proposal']:
-            import re
             proposal_text = data['proposal']
-            # หาตำแหน่งของ ! และแทนที่ทีละตัว
             lines = []
             current_line = ""
+            no_justify_current = False  # flag สำหรับบรรทัดปัจจุบัน
             i = 0
             while i < len(proposal_text):
                 if proposal_text[i] == '!' and i > 0:
-                    # เจอ ! ที่ไม่ใช่ตัวแรก
+                    # เจอ ! = ขึ้นบรรทัดใหม่ + indent + "- "
                     if current_line.strip():
-                        lines.append(current_line.rstrip())
+                        if no_justify_current:
+                            lines.append("\u200B" + current_line.rstrip())
+                        else:
+                            lines.append(current_line.rstrip())
                     current_line = "          - "
+                    no_justify_current = False
                     i += 1
-                    # ข้าม space หลัง ! ถ้ามี
+                    while i < len(proposal_text) and proposal_text[i] == ' ':
+                        i += 1
+                    continue
+                elif proposal_text[i] == '?' and i > 0:
+                    # เจอ ? = ขึ้นบรรทัดใหม่ + บรรทัดก่อนหน้าไม่ justify
+                    if current_line.strip():
+                        lines.append("\u200B" + current_line.rstrip())  # marker ไม่ justify
+                    current_line = ""
+                    no_justify_current = False
+                    i += 1
                     while i < len(proposal_text) and proposal_text[i] == ' ':
                         i += 1
                     continue
@@ -99,7 +113,10 @@ def generate_pdf():
                     i += 1
 
             if current_line.strip():
-                lines.append(current_line.rstrip())
+                if no_justify_current:
+                    lines.append("\u200B" + current_line.rstrip())
+                else:
+                    lines.append(current_line.rstrip())
 
             # รวมผลลัพธ์
             if lines:
@@ -129,13 +146,29 @@ def generate_pdf():
         doc.render(data)
 
         # บังคับ justify ทุก paragraph (รวมใน table ด้วย)
+        # ยกเว้นบรรทัดที่มี marker \u200B (ไม่ต้อง justify)
         for paragraph in doc.paragraphs:
-            paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+            if paragraph.text.startswith("\u200B"):
+                paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                # ลบ marker ออก
+                for run in paragraph.runs:
+                    if run.text.startswith("\u200B"):
+                        run.text = run.text[1:]
+                        break
+            else:
+                paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         for table in doc.tables:
             for row in table.rows:
                 for cell in row.cells:
                     for paragraph in cell.paragraphs:
-                        paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+                        if paragraph.text.startswith("\u200B"):
+                            paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                            for run in paragraph.runs:
+                                if run.text.startswith("\u200B"):
+                                    run.text = run.text[1:]
+                                    break
+                        else:
+                            paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
         with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_docx:
             doc.save(tmp_docx.name)
@@ -617,17 +650,33 @@ def generate_2in1_memo():
         if missing:
             return jsonify({'error': f"Missing fields: {', '.join(missing)}"}), 400
 
-        # จัดรูปแบบ proposal ให้มี indent สำหรับเครื่องหมาย ! (แสดงผลเป็น -)
+        # จัดรูปแบบ proposal:
+        # ! = ขึ้นบรรทัดใหม่ + indent + "- "
+        # ? = ขึ้นบรรทัดใหม่ + บรรทัดก่อนหน้าไม่ justify (ใช้ \u200B เป็น marker)
         if 'proposal' in data and data['proposal']:
             proposal_text = data['proposal']
             lines = []
             current_line = ""
+            no_justify_current = False
             i = 0
             while i < len(proposal_text):
                 if proposal_text[i] == '!' and i > 0:
                     if current_line.strip():
-                        lines.append(current_line.rstrip())
+                        if no_justify_current:
+                            lines.append("\u200B" + current_line.rstrip())
+                        else:
+                            lines.append(current_line.rstrip())
                     current_line = "          - "
+                    no_justify_current = False
+                    i += 1
+                    while i < len(proposal_text) and proposal_text[i] == ' ':
+                        i += 1
+                    continue
+                elif proposal_text[i] == '?' and i > 0:
+                    if current_line.strip():
+                        lines.append("\u200B" + current_line.rstrip())
+                    current_line = ""
+                    no_justify_current = False
                     i += 1
                     while i < len(proposal_text) and proposal_text[i] == ' ':
                         i += 1
@@ -637,7 +686,10 @@ def generate_2in1_memo():
                     i += 1
 
             if current_line.strip():
-                lines.append(current_line.rstrip())
+                if no_justify_current:
+                    lines.append("\u200B" + current_line.rstrip())
+                else:
+                    lines.append(current_line.rstrip())
 
             if lines:
                 if lines[0].startswith('! '):
@@ -668,13 +720,28 @@ def generate_2in1_memo():
         doc.render(data)
 
         # บังคับ justify ทุก paragraph (รวมใน table ด้วย)
+        # ยกเว้นบรรทัดที่มี marker \u200B (ไม่ต้อง justify)
         for paragraph in doc.paragraphs:
-            paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+            if paragraph.text.startswith("\u200B"):
+                paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                for run in paragraph.runs:
+                    if run.text.startswith("\u200B"):
+                        run.text = run.text[1:]
+                        break
+            else:
+                paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         for table in doc.tables:
             for row in table.rows:
                 for cell in row.cells:
                     for paragraph in cell.paragraphs:
-                        paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+                        if paragraph.text.startswith("\u200B"):
+                            paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                            for run in paragraph.runs:
+                                if run.text.startswith("\u200B"):
+                                    run.text = run.text[1:]
+                                    break
+                        else:
+                            paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
         with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_docx:
             doc.save(tmp_docx.name)
