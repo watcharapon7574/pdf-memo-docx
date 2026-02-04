@@ -84,7 +84,7 @@ def generate_pdf():
 
         # จัดรูปแบบ proposal:
         # ! = ขึ้นบรรทัดใหม่ + indent + "- "
-        # ? = ขึ้นบรรทัดใหม่ + แทนที่ space ด้วย non-breaking space (ป้องกันการยืด)
+        # ? = แทนที่ด้วย non-breaking space + ขึ้นบรรทัดใหม่
         if 'proposal' in data and data['proposal']:
             proposal_text = data['proposal']
             lines = []
@@ -101,10 +101,10 @@ def generate_pdf():
                         i += 1
                     continue
                 elif proposal_text[i] == '?' and i > 0:
-                    # เจอ ? = ขึ้นบรรทัดใหม่ + แทนที่ space ด้วย non-breaking space (ป้องกันการยืด)
+                    # เจอ ? = ขึ้นบรรทัดใหม่ + เติม non-breaking space ท้ายบรรทัด
                     if current_line.strip():
-                        # แทนที่ช่องว่างปกติด้วย non-breaking space เพื่อไม่ให้ justify ยืดได้
-                        current_line = current_line.rstrip().replace(' ', '\u00A0')
+                        # เติม non-breaking space ท้ายบรรทัดเพื่อไม่ให้ justify ยืดได้
+                        current_line = current_line.rstrip() + '\u00A0'
                         lines.append(current_line)
                     current_line = ""
                     i += 1
@@ -643,7 +643,7 @@ def generate_2in1_memo():
 
         # จัดรูปแบบ proposal:
         # ! = ขึ้นบรรทัดใหม่ + indent + "- "
-        # ? = ขึ้นบรรทัดใหม่ + แทนที่ space ด้วย non-breaking space (ป้องกันการยืด)
+        # ? = แทนที่ด้วย non-breaking space + ขึ้นบรรทัดใหม่
         if 'proposal' in data and data['proposal']:
             proposal_text = data['proposal']
             lines = []
@@ -660,10 +660,10 @@ def generate_2in1_memo():
                         i += 1
                     continue
                 elif proposal_text[i] == '?' and i > 0:
-                    # เจอ ? = ขึ้นบรรทัดใหม่ + แทนที่ space ด้วย non-breaking space (ป้องกันการยืด)
+                    # เจอ ? = ขึ้นบรรทัดใหม่ + เติม non-breaking space ท้ายบรรทัด
                     if current_line.strip():
-                        # แทนที่ช่องว่างปกติด้วย non-breaking space เพื่อไม่ให้ justify ยืดได้
-                        current_line = current_line.rstrip().replace(' ', '\u00A0')
+                        # เติม non-breaking space ท้ายบรรทัดเพื่อไม่ให้ justify ยืดได้
+                        current_line = current_line.rstrip() + '\u00A0'
                         lines.append(current_line)
                     current_line = ""
                     i += 1
