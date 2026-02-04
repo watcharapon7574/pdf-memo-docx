@@ -141,6 +141,13 @@ def generate_pdf():
             doc.save(tmp_docx.name)
             tmp_pdf = tmp_docx.name.replace('.docx', '.pdf')
             convert_docx_to_pdf(tmp_docx.name, tmp_pdf)
+
+        # เพิ่มหน้าเปล่า 1 หน้าสำหรับพื้นที่ลายเซ็น
+        pdf = fitz.open(tmp_pdf)
+        pdf.new_page(width=pdf[0].rect.width, height=pdf[0].rect.height)
+        pdf.save(tmp_pdf, incremental=False)
+        pdf.close()
+
         return send_file(tmp_pdf, mimetype="application/pdf", as_attachment=True, download_name="memo.pdf")
     except Exception as e:
         print(traceback.format_exc())
@@ -673,8 +680,14 @@ def generate_2in1_memo():
             tmp_pdf = tmp_docx.name.replace('.docx', '.pdf')
             convert_docx_to_pdf(tmp_docx.name, tmp_pdf)
 
+        # เพิ่มหน้าเปล่า 1 หน้าสำหรับพื้นที่ลายเซ็น
+        pdf_for_blank = fitz.open(tmp_pdf)
+        pdf_for_blank.new_page(width=pdf_for_blank[0].rect.width, height=pdf_for_blank[0].rect.height)
+        pdf_for_blank.save(tmp_pdf, incremental=False)
+        pdf_for_blank.close()
+
         # ===== ส่วนที่ 2: เพิ่มลายเซ็น (จาก /add_signature_v2) =====
-        
+
         # ตรวจสอบว่ามี signatures หรือไม่
         if 'signatures' not in request.form:
             # ถ้าไม่มี signatures ให้ return PDF ธรรมดา
