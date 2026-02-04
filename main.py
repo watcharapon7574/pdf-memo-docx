@@ -74,36 +74,38 @@ def generate_pdf():
             return jsonify({'error': f"Missing fields: {', '.join(missing)}"}), 400
         # =====================
 
-        # จัดรูปแบบ proposal ให้มี indent สำหรับเครื่องหมาย -
+        # จัดรูปแบบ proposal ให้มี indent สำหรับเครื่องหมาย ! (แสดงผลเป็น -)
         if 'proposal' in data and data['proposal']:
             import re
             proposal_text = data['proposal']
-            # หาตำแหน่งของ - และแทนที่ทีละตัว
+            # หาตำแหน่งของ ! และแทนที่ทีละตัว
             lines = []
             current_line = ""
             i = 0
             while i < len(proposal_text):
-                if proposal_text[i] == '-' and i > 0:
-                    # เจอ - ที่ไม่ใช่ตัวแรก
+                if proposal_text[i] == '!' and i > 0:
+                    # เจอ ! ที่ไม่ใช่ตัวแรก
                     if current_line.strip():
                         lines.append(current_line.rstrip())
                     current_line = "          - "
                     i += 1
-                    # ข้าม space หลัง - ถ้ามี
+                    # ข้าม space หลัง ! ถ้ามี
                     while i < len(proposal_text) and proposal_text[i] == ' ':
                         i += 1
                     continue
                 else:
                     current_line += proposal_text[i]
                     i += 1
-            
+
             if current_line.strip():
                 lines.append(current_line.rstrip())
-            
+
             # รวมผลลัพธ์
             if lines:
-                if lines[0].startswith('- '):
-                    lines[0] = '          ' + lines[0]
+                if lines[0].startswith('! '):
+                    lines[0] = '          - ' + lines[0][2:]
+                elif lines[0].startswith('!'):
+                    lines[0] = '          - ' + lines[0][1:]
                 data['proposal'] = '\n'.join(lines)
             else:
                 data['proposal'] = proposal_text
@@ -596,14 +598,14 @@ def generate_2in1_memo():
         if missing:
             return jsonify({'error': f"Missing fields: {', '.join(missing)}"}), 400
 
-        # จัดรูปแบบ proposal ให้มี indent สำหรับเครื่องหมาย -
+        # จัดรูปแบบ proposal ให้มี indent สำหรับเครื่องหมาย ! (แสดงผลเป็น -)
         if 'proposal' in data and data['proposal']:
             proposal_text = data['proposal']
             lines = []
             current_line = ""
             i = 0
             while i < len(proposal_text):
-                if proposal_text[i] == '-' and i > 0:
+                if proposal_text[i] == '!' and i > 0:
                     if current_line.strip():
                         lines.append(current_line.rstrip())
                     current_line = "          - "
@@ -614,13 +616,15 @@ def generate_2in1_memo():
                 else:
                     current_line += proposal_text[i]
                     i += 1
-            
+
             if current_line.strip():
                 lines.append(current_line.rstrip())
-            
+
             if lines:
-                if lines[0].startswith('- '):
-                    lines[0] = '          ' + lines[0]
+                if lines[0].startswith('! '):
+                    lines[0] = '          - ' + lines[0][2:]
+                elif lines[0].startswith('!'):
+                    lines[0] = '          - ' + lines[0][1:]
                 data['proposal'] = '\n'.join(lines)
             else:
                 data['proposal'] = proposal_text
