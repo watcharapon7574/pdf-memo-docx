@@ -93,18 +93,14 @@ def generate_pdf():
             i = 0
             while i < len(proposal_text):
                 if proposal_text[i] == '!' and i > 0:
-                    # เจอ ! = ขึ้นบรรทัดใหม่ + indent + "- "
+                    # เจอ ! = ขึ้นบรรทัดใหม่ + "- "
                     if current_line.strip():
-                        # มี content ก่อน ! → save แล้วเพิ่ม indent 10 spaces
                         line_text = current_line.rstrip()
                         if mark_previous_no_justify:
                             line_text = '\u200B' + line_text
                             mark_previous_no_justify = False
                         lines.append(line_text)
-                        current_line = "          - "  # 10 spaces + "- "
-                    else:
-                        # ไม่มี content ก่อน ! (เช่น ?! ติดกัน) → ไม่ต้อง indent
-                        current_line = "- "
+                    current_line = "- "
                     i += 1
                     while i < len(proposal_text) and proposal_text[i] == ' ':
                         i += 1
@@ -676,18 +672,14 @@ def generate_2in1_memo():
             i = 0
             while i < len(proposal_text):
                 if proposal_text[i] == '!' and i > 0:
-                    # เจอ ! = ขึ้นบรรทัดใหม่ + indent + "- "
+                    # เจอ ! = ขึ้นบรรทัดใหม่ + "- "
                     if current_line.strip():
-                        # มี content ก่อน ! → save แล้วเพิ่ม indent 10 spaces
                         line_text = current_line.rstrip()
                         if mark_previous_no_justify:
                             line_text = '\u200B' + line_text
                             mark_previous_no_justify = False
                         lines.append(line_text)
-                        current_line = "          - "  # 10 spaces + "- "
-                    else:
-                        # ไม่มี content ก่อน ! (เช่น ?! ติดกัน) → ไม่ต้อง indent
-                        current_line = "- "
+                    current_line = "- "
                     i += 1
                     while i < len(proposal_text) and proposal_text[i] == ' ':
                         i += 1
