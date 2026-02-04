@@ -84,7 +84,8 @@ def generate_pdf():
 
         # จัดรูปแบบ proposal:
         # ! = ขึ้นบรรทัดใหม่ + indent + "- "
-        # ? = แทนที่ทุก space ด้วย non-breaking space + ขึ้นบรรทัดใหม่ (ป้องกัน justify ยืด)
+        # ? = ขึ้นบรรทัดใหม่ + ทำให้ทั้ง proposal ไม่ justify (ใช้ marker \u200B)
+        has_no_justify = False  # flag บอกว่ามี ? หรือไม่
         if 'proposal' in data and data['proposal']:
             proposal_text = data['proposal']
             lines = []
@@ -101,11 +102,10 @@ def generate_pdf():
                         i += 1
                     continue
                 elif proposal_text[i] == '?' and i > 0:
-                    # เจอ ? = ขึ้นบรรทัดใหม่ + แทนที่ทุก space ด้วย non-breaking space
+                    # เจอ ? = ขึ้นบรรทัดใหม่ + mark ว่าไม่ต้อง justify
+                    has_no_justify = True
                     if current_line.strip():
-                        # แทนที่ทุก space ด้วย non-breaking space เพื่อไม่ให้ justify ยืดได้
-                        current_line = current_line.rstrip().replace(' ', '\u00A0')
-                        lines.append(current_line)
+                        lines.append(current_line.rstrip())
                     current_line = ""
                     i += 1
                     while i < len(proposal_text) and proposal_text[i] == ' ':
@@ -124,6 +124,9 @@ def generate_pdf():
                     lines[0] = '          - ' + lines[0][2:]
                 elif lines[0].startswith('!'):
                     lines[0] = '          - ' + lines[0][1:]
+                # ถ้ามี ? ให้เติม marker ที่ต้นข้อความเพื่อบอกว่าไม่ต้อง justify
+                if has_no_justify:
+                    lines[0] = '\u200B' + lines[0]
                 data['proposal'] = '\n'.join(lines)
             else:
                 data['proposal'] = proposal_text
@@ -146,13 +149,24 @@ def generate_pdf():
         doc.render(data)
 
         # บังคับ justify ทุก paragraph (รวมใน table ด้วย)
+        # ยกเว้น paragraph ที่มี marker \u200B (ไม่ justify)
         for paragraph in doc.paragraphs:
-            paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+            if '\u200B' in paragraph.text:
+                paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                for run in paragraph.runs:
+                    run.text = run.text.replace('\u200B', '')
+            else:
+                paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         for table in doc.tables:
             for row in table.rows:
                 for cell in row.cells:
                     for paragraph in cell.paragraphs:
-                        paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+                        if '\u200B' in paragraph.text:
+                            paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                            for run in paragraph.runs:
+                                run.text = run.text.replace('\u200B', '')
+                        else:
+                            paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
         with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_docx:
             doc.save(tmp_docx.name)
@@ -643,7 +657,8 @@ def generate_2in1_memo():
 
         # จัดรูปแบบ proposal:
         # ! = ขึ้นบรรทัดใหม่ + indent + "- "
-        # ? = แทนที่ทุก space ด้วย non-breaking space + ขึ้นบรรทัดใหม่ (ป้องกัน justify ยืด)
+        # ? = ขึ้นบรรทัดใหม่ + ทำให้ทั้ง proposal ไม่ justify (ใช้ marker \u200B)
+        has_no_justify = False  # flag บอกว่ามี ? หรือไม่
         if 'proposal' in data and data['proposal']:
             proposal_text = data['proposal']
             lines = []
@@ -660,11 +675,10 @@ def generate_2in1_memo():
                         i += 1
                     continue
                 elif proposal_text[i] == '?' and i > 0:
-                    # เจอ ? = ขึ้นบรรทัดใหม่ + แทนที่ทุก space ด้วย non-breaking space
+                    # เจอ ? = ขึ้นบรรทัดใหม่ + mark ว่าไม่ต้อง justify
+                    has_no_justify = True
                     if current_line.strip():
-                        # แทนที่ทุก space ด้วย non-breaking space เพื่อไม่ให้ justify ยืดได้
-                        current_line = current_line.rstrip().replace(' ', '\u00A0')
-                        lines.append(current_line)
+                        lines.append(current_line.rstrip())
                     current_line = ""
                     i += 1
                     while i < len(proposal_text) and proposal_text[i] == ' ':
@@ -682,6 +696,9 @@ def generate_2in1_memo():
                     lines[0] = '          - ' + lines[0][2:]
                 elif lines[0].startswith('!'):
                     lines[0] = '          - ' + lines[0][1:]
+                # ถ้ามี ? ให้เติม marker ที่ต้นข้อความเพื่อบอกว่าไม่ต้อง justify
+                if has_no_justify:
+                    lines[0] = '\u200B' + lines[0]
                 data['proposal'] = '\n'.join(lines)
             else:
                 data['proposal'] = proposal_text
@@ -706,13 +723,24 @@ def generate_2in1_memo():
         doc.render(data)
 
         # บังคับ justify ทุก paragraph (รวมใน table ด้วย)
+        # ยกเว้น paragraph ที่มี marker \u200B (ไม่ justify)
         for paragraph in doc.paragraphs:
-            paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+            if '\u200B' in paragraph.text:
+                paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                for run in paragraph.runs:
+                    run.text = run.text.replace('\u200B', '')
+            else:
+                paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         for table in doc.tables:
             for row in table.rows:
                 for cell in row.cells:
                     for paragraph in cell.paragraphs:
-                        paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+                        if '\u200B' in paragraph.text:
+                            paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                            for run in paragraph.runs:
+                                run.text = run.text.replace('\u200B', '')
+                        else:
+                            paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
         with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_docx:
             doc.save(tmp_docx.name)
