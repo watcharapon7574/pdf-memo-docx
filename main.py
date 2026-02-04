@@ -145,10 +145,11 @@ def generate_pdf():
         # เพิ่มหน้าเปล่า 1 หน้าสำหรับพื้นที่ลายเซ็น
         pdf = fitz.open(tmp_pdf)
         pdf.new_page(width=pdf[0].rect.width, height=pdf[0].rect.height)
-        pdf.save(tmp_pdf, incremental=False)
+        tmp_pdf_with_blank = tmp_pdf.replace('.pdf', '_blank.pdf')
+        pdf.save(tmp_pdf_with_blank)
         pdf.close()
 
-        return send_file(tmp_pdf, mimetype="application/pdf", as_attachment=True, download_name="memo.pdf")
+        return send_file(tmp_pdf_with_blank, mimetype="application/pdf", as_attachment=True, download_name="memo.pdf")
     except Exception as e:
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
@@ -683,8 +684,10 @@ def generate_2in1_memo():
         # เพิ่มหน้าเปล่า 1 หน้าสำหรับพื้นที่ลายเซ็น
         pdf_for_blank = fitz.open(tmp_pdf)
         pdf_for_blank.new_page(width=pdf_for_blank[0].rect.width, height=pdf_for_blank[0].rect.height)
-        pdf_for_blank.save(tmp_pdf, incremental=False)
+        tmp_pdf_with_blank = tmp_pdf.replace('.pdf', '_blank.pdf')
+        pdf_for_blank.save(tmp_pdf_with_blank)
         pdf_for_blank.close()
+        tmp_pdf = tmp_pdf_with_blank  # ใช้ไฟล์ที่มีหน้าเปล่าต่อ
 
         # ===== ส่วนที่ 2: เพิ่มลายเซ็น (จาก /add_signature_v2) =====
 
