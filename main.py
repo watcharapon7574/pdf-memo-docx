@@ -84,8 +84,7 @@ def generate_pdf():
 
         # จัดรูปแบบ proposal:
         # ! = ขึ้นบรรทัดใหม่ + indent + "- "
-        # ? = ขึ้นบรรทัดใหม่ + เติม non-breaking space ให้เต็มบรรทัด (ไม่ถูกยืด)
-        TARGET_LINE_LENGTH = 75  # ความยาวบรรทัดโดยประมาณ
+        # ? = ขึ้นบรรทัดใหม่ + แทนที่ space ด้วย non-breaking space (ป้องกันการยืด)
         if 'proposal' in data and data['proposal']:
             proposal_text = data['proposal']
             lines = []
@@ -102,15 +101,10 @@ def generate_pdf():
                         i += 1
                     continue
                 elif proposal_text[i] == '?' and i > 0:
-                    # เจอ ? = ขึ้นบรรทัดใหม่ + เติม non-breaking space ให้เต็มบรรทัด
+                    # เจอ ? = ขึ้นบรรทัดใหม่ + แทนที่ space ด้วย non-breaking space (ป้องกันการยืด)
                     if current_line.strip():
-                        # 1. ลบช่องว่างท้ายบรรทัดก่อน
-                        current_line = current_line.rstrip()
-                        # 2. เติม non-breaking space ให้เต็มบรรทัด
-                        line_length = len(current_line)
-                        if line_length < TARGET_LINE_LENGTH:
-                            padding = '\u00A0' * (TARGET_LINE_LENGTH - line_length)
-                            current_line += padding
+                        # แทนที่ช่องว่างปกติด้วย non-breaking space เพื่อไม่ให้ justify ยืดได้
+                        current_line = current_line.rstrip().replace(' ', '\u00A0')
                         lines.append(current_line)
                     current_line = ""
                     i += 1
@@ -649,8 +643,7 @@ def generate_2in1_memo():
 
         # จัดรูปแบบ proposal:
         # ! = ขึ้นบรรทัดใหม่ + indent + "- "
-        # ? = ขึ้นบรรทัดใหม่ + เติม non-breaking space ให้เต็มบรรทัด (ไม่ถูกยืด)
-        TARGET_LINE_LENGTH = 75  # ความยาวบรรทัดโดยประมาณ
+        # ? = ขึ้นบรรทัดใหม่ + แทนที่ space ด้วย non-breaking space (ป้องกันการยืด)
         if 'proposal' in data and data['proposal']:
             proposal_text = data['proposal']
             lines = []
@@ -667,15 +660,10 @@ def generate_2in1_memo():
                         i += 1
                     continue
                 elif proposal_text[i] == '?' and i > 0:
-                    # เจอ ? = ขึ้นบรรทัดใหม่ + เติม non-breaking space ให้เต็มบรรทัด
+                    # เจอ ? = ขึ้นบรรทัดใหม่ + แทนที่ space ด้วย non-breaking space (ป้องกันการยืด)
                     if current_line.strip():
-                        # 1. ลบช่องว่างท้ายบรรทัดก่อน
-                        current_line = current_line.rstrip()
-                        # 2. เติม non-breaking space ให้เต็มบรรทัด
-                        line_length = len(current_line)
-                        if line_length < TARGET_LINE_LENGTH:
-                            padding = '\u00A0' * (TARGET_LINE_LENGTH - line_length)
-                            current_line += padding
+                        # แทนที่ช่องว่างปกติด้วย non-breaking space เพื่อไม่ให้ justify ยืดได้
+                        current_line = current_line.rstrip().replace(' ', '\u00A0')
                         lines.append(current_line)
                     current_line = ""
                     i += 1
