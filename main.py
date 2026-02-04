@@ -100,7 +100,7 @@ def generate_pdf():
                             line_text = '\u200B' + line_text
                             mark_previous_no_justify = False
                         lines.append(line_text)
-                    current_line = "          - "
+                    current_line = "- "
                     i += 1
                     while i < len(proposal_text) and proposal_text[i] == ' ':
                         i += 1
@@ -128,9 +128,9 @@ def generate_pdf():
             # รวมผลลัพธ์เป็น list สำหรับ template loop
             if lines:
                 if lines[0].startswith('! '):
-                    lines[0] = '          - ' + lines[0][2:]
+                    lines[0] = '- ' + lines[0][2:]
                 elif lines[0].startswith('!'):
-                    lines[0] = '          - ' + lines[0][1:]
+                    lines[0] = '- ' + lines[0][1:]
                 data['proposal_lines'] = lines
             else:
                 data['proposal_lines'] = [proposal_text]
@@ -679,7 +679,7 @@ def generate_2in1_memo():
                             line_text = '\u200B' + line_text
                             mark_previous_no_justify = False
                         lines.append(line_text)
-                    current_line = "          - "
+                    current_line = "- "
                     i += 1
                     while i < len(proposal_text) and proposal_text[i] == ' ':
                         i += 1
@@ -706,9 +706,9 @@ def generate_2in1_memo():
             # รวมผลลัพธ์เป็น list สำหรับ template loop
             if lines:
                 if lines[0].startswith('! '):
-                    lines[0] = '          - ' + lines[0][2:]
+                    lines[0] = '- ' + lines[0][2:]
                 elif lines[0].startswith('!'):
-                    lines[0] = '          - ' + lines[0][1:]
+                    lines[0] = '- ' + lines[0][1:]
                 data['proposal_lines'] = lines
             else:
                 data['proposal_lines'] = [proposal_text]
