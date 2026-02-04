@@ -77,33 +77,33 @@ def generate_pdf():
 
         # จัดรูปแบบ proposal:
         # ! = ขึ้นบรรทัดใหม่ + indent + "- "
-        # ? = ขึ้นบรรทัดใหม่ + บรรทัดก่อนหน้าไม่ justify (ใช้ \u200B เป็น marker)
+        # ? = ขึ้นบรรทัดใหม่ + เติม non-breaking space ให้เต็มบรรทัด (ไม่ถูกยืด)
+        TARGET_LINE_LENGTH = 75  # ความยาวบรรทัดโดยประมาณ
         if 'proposal' in data and data['proposal']:
             proposal_text = data['proposal']
             lines = []
             current_line = ""
-            no_justify_current = False  # flag สำหรับบรรทัดปัจจุบัน
             i = 0
             while i < len(proposal_text):
                 if proposal_text[i] == '!' and i > 0:
                     # เจอ ! = ขึ้นบรรทัดใหม่ + indent + "- "
                     if current_line.strip():
-                        if no_justify_current:
-                            lines.append("\u200B" + current_line.rstrip())
-                        else:
-                            lines.append(current_line.rstrip())
+                        lines.append(current_line.rstrip())
                     current_line = "          - "
-                    no_justify_current = False
                     i += 1
                     while i < len(proposal_text) and proposal_text[i] == ' ':
                         i += 1
                     continue
                 elif proposal_text[i] == '?' and i > 0:
-                    # เจอ ? = ขึ้นบรรทัดใหม่ + บรรทัดก่อนหน้าไม่ justify
+                    # เจอ ? = ขึ้นบรรทัดใหม่ + เติม space ให้เต็มบรรทัด
                     if current_line.strip():
-                        lines.append("\u200B" + current_line.rstrip())  # marker ไม่ justify
+                        # เติม non-breaking space ให้เต็มบรรทัด
+                        line_length = len(current_line)
+                        if line_length < TARGET_LINE_LENGTH:
+                            padding = '\u00A0' * (TARGET_LINE_LENGTH - line_length)
+                            current_line += padding
+                        lines.append(current_line)
                     current_line = ""
-                    no_justify_current = False
                     i += 1
                     while i < len(proposal_text) and proposal_text[i] == ' ':
                         i += 1
@@ -113,10 +113,7 @@ def generate_pdf():
                     i += 1
 
             if current_line.strip():
-                if no_justify_current:
-                    lines.append("\u200B" + current_line.rstrip())
-                else:
-                    lines.append(current_line.rstrip())
+                lines.append(current_line.rstrip())
 
             # รวมผลลัพธ์
             if lines:
@@ -146,25 +143,13 @@ def generate_pdf():
         doc.render(data)
 
         # บังคับ justify ทุก paragraph (รวมใน table ด้วย)
-        # ยกเว้น paragraph ที่มี marker \u200B (ไม่ต้อง justify ทั้ง paragraph)
         for paragraph in doc.paragraphs:
-            if "\u200B" in paragraph.text:
-                paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
-                # ลบ marker ทั้งหมดออก
-                for run in paragraph.runs:
-                    run.text = run.text.replace("\u200B", "")
-            else:
-                paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         for table in doc.tables:
             for row in table.rows:
                 for cell in row.cells:
                     for paragraph in cell.paragraphs:
-                        if "\u200B" in paragraph.text:
-                            paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
-                            for run in paragraph.runs:
-                                run.text = run.text.replace("\u200B", "")
-                        else:
-                            paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+                        paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
         with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_docx:
             doc.save(tmp_docx.name)
@@ -648,31 +633,33 @@ def generate_2in1_memo():
 
         # จัดรูปแบบ proposal:
         # ! = ขึ้นบรรทัดใหม่ + indent + "- "
-        # ? = ขึ้นบรรทัดใหม่ + บรรทัดก่อนหน้าไม่ justify (ใช้ \u200B เป็น marker)
+        # ? = ขึ้นบรรทัดใหม่ + เติม non-breaking space ให้เต็มบรรทัด (ไม่ถูกยืด)
+        TARGET_LINE_LENGTH = 75  # ความยาวบรรทัดโดยประมาณ
         if 'proposal' in data and data['proposal']:
             proposal_text = data['proposal']
             lines = []
             current_line = ""
-            no_justify_current = False
             i = 0
             while i < len(proposal_text):
                 if proposal_text[i] == '!' and i > 0:
+                    # เจอ ! = ขึ้นบรรทัดใหม่ + indent + "- "
                     if current_line.strip():
-                        if no_justify_current:
-                            lines.append("\u200B" + current_line.rstrip())
-                        else:
-                            lines.append(current_line.rstrip())
+                        lines.append(current_line.rstrip())
                     current_line = "          - "
-                    no_justify_current = False
                     i += 1
                     while i < len(proposal_text) and proposal_text[i] == ' ':
                         i += 1
                     continue
                 elif proposal_text[i] == '?' and i > 0:
+                    # เจอ ? = ขึ้นบรรทัดใหม่ + เติม space ให้เต็มบรรทัด
                     if current_line.strip():
-                        lines.append("\u200B" + current_line.rstrip())
+                        # เติม non-breaking space ให้เต็มบรรทัด
+                        line_length = len(current_line)
+                        if line_length < TARGET_LINE_LENGTH:
+                            padding = '\u00A0' * (TARGET_LINE_LENGTH - line_length)
+                            current_line += padding
+                        lines.append(current_line)
                     current_line = ""
-                    no_justify_current = False
                     i += 1
                     while i < len(proposal_text) and proposal_text[i] == ' ':
                         i += 1
@@ -682,10 +669,7 @@ def generate_2in1_memo():
                     i += 1
 
             if current_line.strip():
-                if no_justify_current:
-                    lines.append("\u200B" + current_line.rstrip())
-                else:
-                    lines.append(current_line.rstrip())
+                lines.append(current_line.rstrip())
 
             if lines:
                 if lines[0].startswith('! '):
@@ -716,24 +700,13 @@ def generate_2in1_memo():
         doc.render(data)
 
         # บังคับ justify ทุก paragraph (รวมใน table ด้วย)
-        # ยกเว้นบรรทัดที่มี marker \u200B (ไม่ต้อง justify)
         for paragraph in doc.paragraphs:
-            if "\u200B" in paragraph.text:
-                paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
-                for run in paragraph.runs:
-                    run.text = run.text.replace("\u200B", "")
-            else:
-                paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         for table in doc.tables:
             for row in table.rows:
                 for cell in row.cells:
                     for paragraph in cell.paragraphs:
-                        if "\u200B" in paragraph.text:
-                            paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
-                            for run in paragraph.runs:
-                                run.text = run.text.replace("\u200B", "")
-                        else:
-                            paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+                        paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
         with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_docx:
             doc.save(tmp_docx.name)
