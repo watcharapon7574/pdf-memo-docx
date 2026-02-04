@@ -1,6 +1,7 @@
 import subprocess
 from flask import Flask, request, send_file, jsonify
 from docxtpl import DocxTemplate
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 import os
 import tempfile
 import fitz  # PyMuPDF
@@ -126,6 +127,11 @@ def generate_pdf():
             return jsonify({'error': f'Template file not found: {template_path}'}), 500
         doc = DocxTemplate(template_path)
         doc.render(data)
+
+        # บังคับ justify ทุก paragraph
+        for paragraph in doc.paragraphs:
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+
         with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_docx:
             doc.save(tmp_docx.name)
             tmp_pdf = tmp_docx.name.replace('.docx', '.pdf')
@@ -647,7 +653,11 @@ def generate_2in1_memo():
         
         doc = DocxTemplate(template_path)
         doc.render(data)
-        
+
+        # บังคับ justify ทุก paragraph
+        for paragraph in doc.paragraphs:
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+
         with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_docx:
             doc.save(tmp_docx.name)
             tmp_pdf = tmp_docx.name.replace('.docx', '.pdf')
