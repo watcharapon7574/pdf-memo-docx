@@ -75,6 +75,13 @@ def generate_pdf():
             return jsonify({'error': f"Missing fields: {', '.join(missing)}"}), 400
         # =====================
 
+        # ลบช่องว่างท้ายบรรทัดใน introduction, fact, proposal
+        for field in ['introduction', 'fact', 'proposal']:
+            if field in data and data[field]:
+                # ลบช่องว่างท้ายแต่ละบรรทัด
+                lines = data[field].split('\n')
+                data[field] = '\n'.join(line.rstrip() for line in lines)
+
         # จัดรูปแบบ proposal:
         # ! = ขึ้นบรรทัดใหม่ + indent + "- "
         # ? = ขึ้นบรรทัดใหม่ + เติม non-breaking space ให้เต็มบรรทัด (ไม่ถูกยืด)
@@ -630,6 +637,13 @@ def generate_2in1_memo():
         missing = [f for f in required_fields if not data.get(f)]
         if missing:
             return jsonify({'error': f"Missing fields: {', '.join(missing)}"}), 400
+
+        # ลบช่องว่างท้ายบรรทัดใน introduction, fact, proposal
+        for field in ['introduction', 'fact', 'proposal']:
+            if field in data and data[field]:
+                # ลบช่องว่างท้ายแต่ละบรรทัด
+                lines = data[field].split('\n')
+                data[field] = '\n'.join(line.rstrip() for line in lines)
 
         # จัดรูปแบบ proposal:
         # ! = ขึ้นบรรทัดใหม่ + indent + "- "
