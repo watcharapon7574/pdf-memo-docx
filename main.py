@@ -146,27 +146,23 @@ def generate_pdf():
         doc.render(data)
 
         # บังคับ justify ทุก paragraph (รวมใน table ด้วย)
-        # ยกเว้นบรรทัดที่มี marker \u200B (ไม่ต้อง justify)
+        # ยกเว้น paragraph ที่มี marker \u200B (ไม่ต้อง justify ทั้ง paragraph)
         for paragraph in doc.paragraphs:
-            if paragraph.text.startswith("\u200B"):
+            if "\u200B" in paragraph.text:
                 paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
-                # ลบ marker ออก
+                # ลบ marker ทั้งหมดออก
                 for run in paragraph.runs:
-                    if run.text.startswith("\u200B"):
-                        run.text = run.text[1:]
-                        break
+                    run.text = run.text.replace("\u200B", "")
             else:
                 paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         for table in doc.tables:
             for row in table.rows:
                 for cell in row.cells:
                     for paragraph in cell.paragraphs:
-                        if paragraph.text.startswith("\u200B"):
+                        if "\u200B" in paragraph.text:
                             paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
                             for run in paragraph.runs:
-                                if run.text.startswith("\u200B"):
-                                    run.text = run.text[1:]
-                                    break
+                                run.text = run.text.replace("\u200B", "")
                         else:
                             paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
@@ -722,24 +718,20 @@ def generate_2in1_memo():
         # บังคับ justify ทุก paragraph (รวมใน table ด้วย)
         # ยกเว้นบรรทัดที่มี marker \u200B (ไม่ต้อง justify)
         for paragraph in doc.paragraphs:
-            if paragraph.text.startswith("\u200B"):
+            if "\u200B" in paragraph.text:
                 paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
                 for run in paragraph.runs:
-                    if run.text.startswith("\u200B"):
-                        run.text = run.text[1:]
-                        break
+                    run.text = run.text.replace("\u200B", "")
             else:
                 paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         for table in doc.tables:
             for row in table.rows:
                 for cell in row.cells:
                     for paragraph in cell.paragraphs:
-                        if paragraph.text.startswith("\u200B"):
+                        if "\u200B" in paragraph.text:
                             paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
                             for run in paragraph.runs:
-                                if run.text.startswith("\u200B"):
-                                    run.text = run.text[1:]
-                                    break
+                                run.text = run.text.replace("\u200B", "")
                         else:
                             paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
