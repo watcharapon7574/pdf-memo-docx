@@ -35,6 +35,52 @@ def to_thai_digits(text):
         return text
     return ''.join(convert_char(c) for c in text)
 
+# --- ฟังก์ชัน process text with ! markers ---
+def process_text_with_markers(text):
+    """
+    Process text with ! markers for indentation
+    ! = newline (0 spaces)
+    !! = newline + 10 spaces
+    !!! = newline + 20 spaces
+    formula: (n-1) * 10 spaces
+    """
+    if not text:
+        return [text] if text else []
+
+    lines = []
+    current_line = ""
+    i = 0
+
+    while i < len(text):
+        if text[i] == '!' and i > 0:
+            # Save current line
+            if current_line.strip():
+                lines.append(current_line.rstrip())
+
+            # Count consecutive !
+            exclaim_count = 0
+            while i < len(text) and text[i] == '!':
+                exclaim_count += 1
+                i += 1
+
+            # Calculate indent: (count - 1) * 10 spaces
+            indent = " " * ((exclaim_count - 1) * 10)
+            current_line = indent
+
+            # Skip spaces after !
+            while i < len(text) and text[i] == ' ':
+                i += 1
+            continue
+        else:
+            current_line += text[i]
+            i += 1
+
+    # Add last line
+    if current_line.strip():
+        lines.append(current_line.rstrip())
+
+    return lines if lines else [text]
+
 # --- ฟังก์ชันวาดข้อความเป็นภาพ ---
 def draw_text_image(text, font_path, font_size=20, color=(2, 53, 139), scale=1):
     from PIL import ImageFont, ImageDraw
@@ -75,67 +121,15 @@ def generate_pdf():
             return jsonify({'error': f"Missing fields: {', '.join(missing)}"}), 400
         # =====================
 
-        # ลบช่องว่างท้ายบรรทัดใน introduction, fact, proposal
+        # จัดรูปแบบ introduction, fact, proposal ด้วย ! markers
+        # ! = ขึ้นบรรทัดใหม่ (0 spaces)
+        # !! = ขึ้นบรรทัดใหม่ + 10 spaces
+        # !!! = ขึ้นบรรทัดใหม่ + 20 spaces
         for field in ['introduction', 'fact', 'proposal']:
             if field in data and data[field]:
-                # ลบช่องว่างท้ายแต่ละบรรทัด
-                lines = data[field].split('\n')
-                data[field] = '\n'.join(line.rstrip() for line in lines)
-
-        # จัดรูปแบบ proposal:
-        # ! = ขึ้นบรรทัดใหม่ + indent + "- "
-        # ? = ขึ้นบรรทัดใหม่ + บรรทัดก่อนหน้าไม่ justify (ใช้ marker \u200B)
-        if 'proposal' in data and data['proposal']:
-            proposal_text = data['proposal']
-            lines = []
-            current_line = ""
-            mark_previous_no_justify = False  # flag สำหรับ mark บรรทัดก่อนหน้า
-            i = 0
-            while i < len(proposal_text):
-                if proposal_text[i] == '!' and i > 0:
-                    # เจอ ! = ขึ้นบรรทัดใหม่ + "- "
-                    if current_line.strip():
-                        line_text = current_line.rstrip()
-                        if mark_previous_no_justify:
-                            line_text = '\u200B' + line_text
-                            mark_previous_no_justify = False
-                        lines.append(line_text)
-                    current_line = "- "
-                    i += 1
-                    while i < len(proposal_text) and proposal_text[i] == ' ':
-                        i += 1
-                    continue
-                elif proposal_text[i] == '?' and i > 0:
-                    # เจอ ? = ขึ้นบรรทัดใหม่ + บรรทัดนี้ไม่ justify
-                    if current_line.strip():
-                        # เติม marker ที่บรรทัดนี้ (บรรทัดก่อน ?)
-                        lines.append('\u200B' + current_line.rstrip())
-                    current_line = ""
-                    i += 1
-                    while i < len(proposal_text) and proposal_text[i] == ' ':
-                        i += 1
-                    continue
-                else:
-                    current_line += proposal_text[i]
-                    i += 1
-
-            if current_line.strip():
-                line_text = current_line.rstrip()
-                if mark_previous_no_justify:
-                    line_text = '\u200B' + line_text
-                lines.append(line_text)
-
-            # รวมผลลัพธ์เป็น list สำหรับ template loop
-            if lines:
-                if lines[0].startswith('! '):
-                    lines[0] = '- ' + lines[0][2:]
-                elif lines[0].startswith('!'):
-                    lines[0] = '- ' + lines[0][1:]
-                data['proposal_lines'] = lines
+                data[f'{field}_lines'] = process_text_with_markers(data[field])
             else:
-                data['proposal_lines'] = [proposal_text]
-        else:
-            data['proposal_lines'] = []
+                data[f'{field}_lines'] = []
 
         # แปลงเลขใน dict เป็นเลขไทย
         def convert_dict(d):
@@ -654,66 +648,15 @@ def generate_2in1_memo():
         if missing:
             return jsonify({'error': f"Missing fields: {', '.join(missing)}"}), 400
 
-        # ลบช่องว่างท้ายบรรทัดใน introduction, fact, proposal
+        # จัดรูปแบบ introduction, fact, proposal ด้วย ! markers
+        # ! = ขึ้นบรรทัดใหม่ (0 spaces)
+        # !! = ขึ้นบรรทัดใหม่ + 10 spaces
+        # !!! = ขึ้นบรรทัดใหม่ + 20 spaces
         for field in ['introduction', 'fact', 'proposal']:
             if field in data and data[field]:
-                # ลบช่องว่างท้ายแต่ละบรรทัด
-                lines = data[field].split('\n')
-                data[field] = '\n'.join(line.rstrip() for line in lines)
-
-        # จัดรูปแบบ proposal:
-        # ! = ขึ้นบรรทัดใหม่ + indent + "- "
-        # ? = ขึ้นบรรทัดใหม่ + บรรทัดก่อนหน้าไม่ justify (ใช้ marker \u200B)
-        if 'proposal' in data and data['proposal']:
-            proposal_text = data['proposal']
-            lines = []
-            current_line = ""
-            mark_previous_no_justify = False
-            i = 0
-            while i < len(proposal_text):
-                if proposal_text[i] == '!' and i > 0:
-                    # เจอ ! = ขึ้นบรรทัดใหม่ + "- "
-                    if current_line.strip():
-                        line_text = current_line.rstrip()
-                        if mark_previous_no_justify:
-                            line_text = '\u200B' + line_text
-                            mark_previous_no_justify = False
-                        lines.append(line_text)
-                    current_line = "- "
-                    i += 1
-                    while i < len(proposal_text) and proposal_text[i] == ' ':
-                        i += 1
-                    continue
-                elif proposal_text[i] == '?' and i > 0:
-                    # เจอ ? = ขึ้นบรรทัดใหม่ + บรรทัดนี้ไม่ justify
-                    if current_line.strip():
-                        lines.append('\u200B' + current_line.rstrip())
-                    current_line = ""
-                    i += 1
-                    while i < len(proposal_text) and proposal_text[i] == ' ':
-                        i += 1
-                    continue
-                else:
-                    current_line += proposal_text[i]
-                    i += 1
-
-            if current_line.strip():
-                line_text = current_line.rstrip()
-                if mark_previous_no_justify:
-                    line_text = '\u200B' + line_text
-                lines.append(line_text)
-
-            # รวมผลลัพธ์เป็น list สำหรับ template loop
-            if lines:
-                if lines[0].startswith('! '):
-                    lines[0] = '- ' + lines[0][2:]
-                elif lines[0].startswith('!'):
-                    lines[0] = '- ' + lines[0][1:]
-                data['proposal_lines'] = lines
+                data[f'{field}_lines'] = process_text_with_markers(data[field])
             else:
-                data['proposal_lines'] = [proposal_text]
-        else:
-            data['proposal_lines'] = []
+                data[f'{field}_lines'] = []
 
         # แปลงเลขใน dict เป็นเลขไทย
         def convert_dict(d):
