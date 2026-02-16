@@ -305,7 +305,7 @@ def add_signature_v2():
         return img
     try:
         DEFAULT_SIGNATURE_HEIGHT = 50
-        DEFAULT_COMMENT_FONT_SIZE = 18
+        DEFAULT_COMMENT_FONT_SIZE = 16
         LINE_SPACING = 20  # ระยะห่างคงที่ระหว่างบรรทัดข้อความ (สำหรับ single-line text)
         font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew.ttf")
         if not os.path.isfile(font_path):
@@ -388,8 +388,8 @@ def add_signature_v2():
                         # fallback to old logic for this sig
                         if sig['type'] == 'text':
                             text = to_thai_digits(sig.get('text', ''))
-                            # ถ้า type == "comment" ให้ font_size=20, font_weight="bold", line_height_ratio=0.96
-                            font_size = 20 if sig.get('type') == 'comment' else DEFAULT_COMMENT_FONT_SIZE
+                            # ถ้า type == "comment" ให้ font_size=18, font_weight="bold", line_height_ratio=0.96
+                            font_size = 18 if sig.get('type') == 'comment' else DEFAULT_COMMENT_FONT_SIZE
                             font_weight = "bold" if sig.get('type') == 'comment' else "regular"
                             line_height_ratio = 0.96 if sig.get('type') == 'comment' else 1.2
                             orig_color = sig.get('color', (2, 53, 139))
@@ -524,8 +524,8 @@ def add_signature_v2():
                                     text = '\n'.join([to_thai_digits(t) for t in wrapped_lines])
                                 else:
                                     text = to_thai_digits(text_value)
-                                # ถ้า type == "comment" ให้ font_size=20, font_weight="bold", line_height_ratio=0.96 (ลด 20%)
-                                font_size = 20 if line_type == 'comment' else DEFAULT_COMMENT_FONT_SIZE
+                                # ถ้า type == "comment" ให้ font_size=18, font_weight="bold", line_height_ratio=0.96 (ลด 20%)
+                                font_size = 18 if line_type == 'comment' else DEFAULT_COMMENT_FONT_SIZE
                                 font_weight = "bold" if line_type == 'comment' else "regular"
                                 line_height_ratio = 0.96 if line_type == 'comment' else 1.2  # comment ใช้ 0.96 = 1.2 * 0.8
                                 orig_color = line.get('color', (2, 53, 139))
@@ -565,8 +565,8 @@ def add_signature_v2():
                 for sig in sigs_sorted:
                     if sig['type'] == 'text':
                         text = to_thai_digits(sig.get('text', ''))
-                        # ถ้า type == "comment" ให้ font_size=20, font_weight="bold", line_height_ratio=0.96
-                        font_size = 20 if sig.get('type') == 'comment' else DEFAULT_COMMENT_FONT_SIZE
+                        # ถ้า type == "comment" ให้ font_size=18, font_weight="bold", line_height_ratio=0.96
+                        font_size = 18 if sig.get('type') == 'comment' else DEFAULT_COMMENT_FONT_SIZE
                         font_weight = "bold" if sig.get('type') == 'comment' else "regular"
                         line_height_ratio = 0.96 if sig.get('type') == 'comment' else 1.2
                         orig_color = sig.get('color', (2, 53, 139))
@@ -756,7 +756,7 @@ def generate_2in1_memo():
             return img
 
         DEFAULT_SIGNATURE_HEIGHT = 50
-        DEFAULT_COMMENT_FONT_SIZE = 18
+        DEFAULT_COMMENT_FONT_SIZE = 16
         font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew.ttf")
         
         if not os.path.isfile(font_path):
@@ -791,7 +791,7 @@ def generate_2in1_memo():
                             # fallback to old logic
                             if sig['type'] == 'text':
                                 text = to_thai_digits(sig.get('text', ''))
-                                font_size = 20 if sig.get('type') == 'comment' else DEFAULT_COMMENT_FONT_SIZE
+                                font_size = 18 if sig.get('type') == 'comment' else DEFAULT_COMMENT_FONT_SIZE
                                 font_weight = "bold" if sig.get('type') == 'comment' else "regular"
                                 orig_color = sig.get('color', (2, 53, 139))
                                 if isinstance(orig_color, (list, tuple)):
@@ -890,7 +890,7 @@ def generate_2in1_memo():
                                     else:
                                         text = to_thai_digits(text_value)
 
-                                    font_size = 20 if line_type == 'comment' else DEFAULT_COMMENT_FONT_SIZE
+                                    font_size = 18 if line_type == 'comment' else DEFAULT_COMMENT_FONT_SIZE
                                     font_weight = "bold" if line_type == 'comment' else "regular"
                                     orig_color = line.get('color', (2, 53, 139))
                                     if isinstance(orig_color, (list, tuple)):
@@ -913,7 +913,7 @@ def generate_2in1_memo():
                     for sig in sigs_sorted:
                         if sig['type'] == 'text':
                             text = to_thai_digits(sig.get('text', ''))
-                            font_size = 20 if sig.get('type') == 'comment' else DEFAULT_COMMENT_FONT_SIZE
+                            font_size = 18 if sig.get('type') == 'comment' else DEFAULT_COMMENT_FONT_SIZE
                             font_weight = "bold" if sig.get('type') == 'comment' else "regular"
                             orig_color = sig.get('color', (2, 53, 139))
                             if isinstance(orig_color, (list, tuple)):
@@ -1808,7 +1808,7 @@ def add_signature_receive():
     try:
         # ===== ส่วนที่ 1: เพิ่มลายเซ็น (จาก /add_signature_v2) =====
         DEFAULT_SIGNATURE_HEIGHT = 50
-        DEFAULT_COMMENT_FONT_SIZE = 18
+        DEFAULT_COMMENT_FONT_SIZE = 16
         font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew.ttf")
         bold_font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew Bold.ttf")
 
@@ -1891,7 +1891,7 @@ def add_signature_receive():
                         # fallback to old logic for this sig
                         if sig['type'] == 'text':
                             text = to_thai_digits(sig.get('text', ''))
-                            font_size = 20 if sig.get('type') == 'comment' else DEFAULT_COMMENT_FONT_SIZE
+                            font_size = 18 if sig.get('type') == 'comment' else DEFAULT_COMMENT_FONT_SIZE
                             font_weight = "bold" if sig.get('type') == 'comment' else "regular"
                             orig_color = sig.get('color', (2, 53, 139))
                             if isinstance(orig_color, (list, tuple)):
@@ -2021,7 +2021,7 @@ def add_signature_receive():
                                     text = '\n'.join([to_thai_digits(t) for t in wrapped_lines])
                                 else:
                                     text = to_thai_digits(text_value)
-                                font_size = 20 if line_type == 'comment' else DEFAULT_COMMENT_FONT_SIZE
+                                font_size = 18 if line_type == 'comment' else DEFAULT_COMMENT_FONT_SIZE
                                 font_weight = "bold" if line_type == 'comment' else "regular"
                                 orig_color = line.get('color', (2, 53, 139))
                                 if isinstance(orig_color, (list, tuple)):
@@ -2054,7 +2054,7 @@ def add_signature_receive():
                 for sig in sigs_sorted:
                     if sig['type'] == 'text':
                         text = to_thai_digits(sig.get('text', ''))
-                        font_size = 20 if sig.get('type') == 'comment' else DEFAULT_COMMENT_FONT_SIZE
+                        font_size = 18 if sig.get('type') == 'comment' else DEFAULT_COMMENT_FONT_SIZE
                         font_weight = "bold" if sig.get('type') == 'comment' else "regular"
                         orig_color = sig.get('color', (2, 53, 139))
                         if isinstance(orig_color, (list, tuple)):
