@@ -131,17 +131,7 @@ def generate_pdf():
             else:
                 data[f'{field}_lines'] = []
 
-        # แปลงเลขใน dict เป็นเลขไทย
-        def convert_dict(d):
-            if isinstance(d, dict):
-                return {k: convert_dict(v) for k, v in d.items()}
-            elif isinstance(d, list):
-                return [convert_dict(i) for i in d]
-            elif isinstance(d, str):
-                return to_thai_digits(d)
-            else:
-                return d
-        data = convert_dict(data)
+        # ไม่แปลงเลขเป็นเลขไทย - ใช้เลขอารบิกตามที่ส่งมา
         template_path = os.path.join(os.path.dirname(__file__), "templates", "memo-template2.docx")
         if not os.path.exists(template_path):
             return jsonify({'error': f'Template file not found: {template_path}'}), 500
@@ -658,17 +648,7 @@ def generate_2in1_memo():
             else:
                 data[f'{field}_lines'] = []
 
-        # แปลงเลขใน dict เป็นเลขไทย
-        def convert_dict(d):
-            if isinstance(d, dict):
-                return {k: convert_dict(v) for k, v in d.items()}
-            elif isinstance(d, list):
-                return [convert_dict(i) for i in d]
-            elif isinstance(d, str):
-                return to_thai_digits(d)
-            else:
-                return d
-        data = convert_dict(data)
+        # ไม่แปลงเลขเป็นเลขไทย - ใช้เลขอารบิกตามที่ส่งมา
         
         template_path = os.path.join(os.path.dirname(__file__), "templates", "memo-template2.docx")
         if not os.path.exists(template_path):
