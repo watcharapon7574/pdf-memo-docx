@@ -131,7 +131,7 @@ def generate_pdf():
             else:
                 data[f'{field}_lines'] = []
 
-        # ไม่แปลงเลขเป็นเลขไทย - ใช้เลขอารบิกตามที่ส่งมา
+        data['date'] = to_thai_digits(data.get('date', ''))
         template_path = os.path.join(os.path.dirname(__file__), "templates", "memo-template2.docx")
         if not os.path.exists(template_path):
             return jsonify({'error': f'Template file not found: {template_path}'}), 500
@@ -648,7 +648,8 @@ def generate_2in1_memo():
             else:
                 data[f'{field}_lines'] = []
 
-        # ไม่แปลงเลขเป็นเลขไทย - ใช้เลขอารบิกตามที่ส่งมา
+        data['doc_number'] = to_thai_digits(data.get('doc_number', ''))
+        data['date'] = to_thai_digits(data.get('date', ''))
         
         template_path = os.path.join(os.path.dirname(__file__), "templates", "memo-template2.docx")
         if not os.path.exists(template_path):
