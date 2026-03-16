@@ -1170,6 +1170,96 @@ def receive_num():
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
+@app.route('/receive_num2', methods=['POST'])
+def receive_num2():
+    """
+    multipart/form-data:
+      - pdf: ไฟล์ PDF
+      - payload: JSON string:
+        {
+          "page": 0,
+          "color": [2,53,139],
+          "group_name": "กลุ่มบริหารงานทั่วไป",
+          "register_no": "506/68",
+          "date": "20 ก.ย. 67"
+        }
+    ตรายาง 3 บรรทัด มุมขวาบน
+    """
+    print("[DEBUG] /receive_num2 API called")
+    try:
+        if 'pdf' not in request.files:
+            return jsonify({'error': 'No PDF file uploaded'}), 400
+        if 'payload' not in request.form:
+            return jsonify({'error': 'No payload'}), 400
+
+        p = json.loads(request.form['payload'])
+        page_no = int(p.get('page', 0))
+        color = tuple(p.get('color', [2,53,139]))
+
+        pdf_bytes = request.files['pdf'].read()
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        if page_no >= len(doc):
+            return jsonify({'error': 'Page out of range'}), 400
+        page = doc[page_no]
+
+        font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew.ttf")
+        bold_font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew Bold.ttf")
+        if not os.path.isfile(font_path) or not os.path.isfile(bold_font_path):
+            return jsonify({'error': 'THSarabunNew fonts not found'}), 500
+
+        page_w = page.rect.width
+        margin = 20
+        frame_width = 200
+        frame_height = 60
+
+        center_x = page_w - margin - frame_width//2
+        center_y = margin + frame_height//2
+
+        box_rect = fitz.Rect(
+            center_x - frame_width//2, center_y - frame_height//2,
+            center_x + frame_width//2, center_y + frame_height//2
+        )
+        box_color = (color[0]/255, color[1]/255, color[2]/255)
+        page.draw_rect(box_rect, color=box_color, width=2)
+
+        def draw_text_img(text, size=16, bold=False):
+            fp = bold_font_path if bold else font_path
+            return draw_text_image(to_thai_digits(text), fp, size, color, scale=1)
+
+        def paste_center(img, cx, cy):
+            left = cx - img.width//2
+            top  = cy - img.height//2
+            rect = fitz.Rect(left, top, left+img.width, top+img.height)
+            bio = io.BytesIO(); img.save(bio, format='PNG')
+            page.insert_image(rect, stream=bio.getvalue())
+
+        group_name = p.get('group_name', '')
+        register_no = p.get('register_no', '')
+        date_text = p.get('date', '')
+
+        header_lines = [
+            group_name,
+            f"เลขรับ {register_no}",
+            f"วันที่ {date_text}"
+        ]
+        gap = 16
+        start_y = center_y - ((len(header_lines)-1) * gap // 2)
+        for i, text in enumerate(header_lines):
+            img = draw_text_img(text, size=16, bold=True)
+            paste_center(img, center_x, start_y + i*gap)
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as outpdf:
+            doc.save(outpdf.name)
+        doc.close()
+
+        response = send_file(outpdf.name, mimetype="application/pdf", as_attachment=True, download_name="receive_num2.pdf")
+        response.headers['X-Debug'] = 'receive_num2_processed'
+        return response
+
+    except Exception as e:
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/stamp_summary', methods=['POST'])
 def stamp_summary():
     """
