@@ -1209,18 +1209,6 @@ def receive_num2():
 
         page_w = page.rect.width
         margin = 20
-        frame_width = 200
-        frame_height = 60
-
-        center_x = page_w - margin - frame_width//2
-        center_y = margin + frame_height//2
-
-        box_rect = fitz.Rect(
-            center_x - frame_width//2, center_y - frame_height//2,
-            center_x + frame_width//2, center_y + frame_height//2
-        )
-        box_color = (color[0]/255, color[1]/255, color[2]/255)
-        page.draw_rect(box_rect, color=box_color, width=2)
 
         def draw_text_img(text, size=16, bold=False):
             fp = bold_font_path if bold else font_path
@@ -1242,10 +1230,28 @@ def receive_num2():
             f"เลขรับ {register_no}",
             f"วันที่ {date_text}"
         ]
+
+        # สร้าง text image ก่อน เพื่อวัดความกว้างจริง
+        text_imgs = [draw_text_img(text, size=16, bold=True) for text in header_lines]
+        max_text_width = max(img.width for img in text_imgs)
+        padding = 20  # เว้นขอบซ้ายขวาในกรอบ
         gap = 16
+
+        frame_width = max_text_width + padding * 2
+        frame_height = len(header_lines) * gap + padding
+
+        center_x = page_w - margin - frame_width//2
+        center_y = margin + frame_height//2
+
+        box_rect = fitz.Rect(
+            center_x - frame_width//2, center_y - frame_height//2,
+            center_x + frame_width//2, center_y + frame_height//2
+        )
+        box_color = (color[0]/255, color[1]/255, color[2]/255)
+        page.draw_rect(box_rect, color=box_color, width=2)
+
         start_y = center_y - ((len(header_lines)-1) * gap // 2)
-        for i, text in enumerate(header_lines):
-            img = draw_text_img(text, size=16, bold=True)
+        for i, img in enumerate(text_imgs):
             paste_center(img, center_x, start_y + i*gap)
 
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as outpdf:
