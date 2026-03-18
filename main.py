@@ -10,9 +10,36 @@ import io
 import json
 import traceback
 from flask_cors import CORS
+import jwt
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
+
+# --- Supabase JWT Authentication ---
+SUPABASE_JWT_SECRET = os.environ.get("SUPABASE_JWT_SECRET")
+
+@app.before_request
+def verify_supabase_jwt():
+    # ข้าม CORS preflight
+    if request.method == "OPTIONS":
+        return None
+
+    # ถ้าไม่ได้ตั้ง JWT_SECRET ใน env ให้ข้ามการเช็ค (สำหรับ dev)
+    if not SUPABASE_JWT_SECRET:
+        return None
+
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return jsonify({"error": "Unauthorized – missing token"}), 401
+
+    token = auth_header.split(" ", 1)[1]
+    try:
+        jwt.decode(token, SUPABASE_JWT_SECRET, algorithms=["HS256"], audience="authenticated")
+    except jwt.ExpiredSignatureError:
+        return jsonify({"error": "Token expired"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"error": "Invalid token"}), 401
+
 # --- ฟังก์ชันแปลง docx → pdf ด้วย LibreOffice ---
 def convert_docx_to_pdf(docx_path, output_pdf_path):
     cmd = [

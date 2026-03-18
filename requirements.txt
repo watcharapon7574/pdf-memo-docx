@@ -4,3 +4,4 @@ python-docx
 PyMuPDF
 Pillow
 flask-cors
+PyJWT
