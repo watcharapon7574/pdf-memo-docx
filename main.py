@@ -63,16 +63,13 @@ def to_thai_digits(text):
     return ''.join(convert_char(c) for c in text)
 
 # --- ฟังก์ชัน process text with ! markers ---
-FIRST_LINE_INDENT = " " * 20  # ย่อหน้าบรรทัดแรก (20 spaces)
-
 def process_text_with_markers(text):
     """
     Process text with ! markers for indentation
-    ! = ขึ้นบรรทัดใหม่ ไม่ย่อหน้า (0 spaces)
-    !! = ขึ้นบรรทัดใหม่ + ย่อหน้า (20 spaces)
-    !!! = ขึ้นบรรทัดใหม่ + ย่อหน้า 2 ครั้ง (40 spaces)
-    formula: (n-1) * 20 spaces
-    บรรทัดแรกจะถูกย่อหน้าอัตโนมัติ 20 spaces
+    ! = newline (0 spaces)
+    !! = newline + 10 spaces
+    !!! = newline + 20 spaces
+    formula: (n-1) * 10 spaces
     """
     if not text:
         return [text] if text else []
@@ -85,12 +82,7 @@ def process_text_with_markers(text):
         if text[i] == '!' and i > 0:
             # Save current line
             if current_line.strip():
-                # บรรทัดแรกเติม indent อัตโนมัติ
-                if not lines:
-                    current_line = FIRST_LINE_INDENT + current_line.rstrip()
-                else:
-                    current_line = current_line.rstrip()
-                lines.append(current_line)
+                lines.append(current_line.rstrip())
 
             # Count consecutive !
             exclaim_count = 0
@@ -98,8 +90,8 @@ def process_text_with_markers(text):
                 exclaim_count += 1
                 i += 1
 
-            # Calculate indent: (count - 1) * 20 spaces
-            indent = " " * ((exclaim_count - 1) * 20)
+            # Calculate indent: (count - 1) * 10 spaces
+            indent = " " * ((exclaim_count - 1) * 10)
             current_line = indent
 
             # Skip spaces after !
@@ -112,11 +104,7 @@ def process_text_with_markers(text):
 
     # Add last line
     if current_line.strip():
-        if not lines:
-            current_line = FIRST_LINE_INDENT + current_line.rstrip()
-        else:
-            current_line = current_line.rstrip()
-        lines.append(current_line)
+        lines.append(current_line.rstrip())
 
     return lines if lines else [text]
 
