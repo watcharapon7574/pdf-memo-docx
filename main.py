@@ -112,6 +112,15 @@ def process_text_with_markers(text):
 A4_WIDTH_PT = 595.28
 A4_HEIGHT_PT = 841.89
 
+def normalize_page_rotation(page):
+    """ลบ rotation ออกจากหน้า PDF ก่อน stamp เพื่อให้พิกัดถูกต้อง
+    Return: rotation เดิม (เพื่อคืนค่าทีหลังถ้าต้องการ)"""
+    rotation = page.rotation
+    if rotation != 0:
+        print(f"[DEBUG] Page has rotation: {rotation}°, normalizing to 0°")
+        page.set_rotation(0)
+    return rotation
+
 def get_page_scale(page):
     """คำนวณ scale factor เทียบกับ A4 เพื่อให้ stamp ขนาดเท่ากันทุก page size"""
     page_w = page.rect.width
@@ -236,6 +245,11 @@ def add_signature():
         pdf_bytes = pdf_file.read()
         pdf = fitz.open(stream=pdf_bytes, filetype="pdf")
 
+        # Normalize rotation ทุกหน้า
+        orig_rotations = {}
+        for i in range(len(pdf)):
+            orig_rotations[i] = normalize_page_rotation(pdf[i])
+
         # --- กลุ่ม sig ตามตำแหน่ง (page, x, y) ---
         from collections import defaultdict
         sig_dict = defaultdict(list)
@@ -283,6 +297,11 @@ def add_signature():
                     rect = fitz.Rect(x, current_y, x + new_width, current_y + fixed_height)
                     page.insert_image(rect, stream=img_byte_arr.getvalue())
                     current_y += fixed_height
+
+        # คืน rotation เดิมทุกหน้า
+        for i, rot in orig_rotations.items():
+            if rot != 0:
+                pdf[i].set_rotation(rot)
 
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_pdf:
             pdf.save(tmp_pdf.name)
@@ -353,6 +372,11 @@ def add_signature_v2():
 
         pdf_bytes = pdf_file.read()
         pdf = fitz.open(stream=pdf_bytes, filetype="pdf")
+
+        # Normalize rotation ทุกหน้า
+        _orig_rotations = {}
+        for i in range(len(pdf)):
+            _orig_rotations[i] = normalize_page_rotation(pdf[i])
 
         from collections import defaultdict
         sig_dict = defaultdict(list)
@@ -634,6 +658,11 @@ def add_signature_v2():
                         rect = fitz.Rect(x, current_y, x + new_width, current_y + fixed_height)
                         page.insert_image(rect, stream=img_byte_arr.getvalue())
                         current_y += fixed_height - 10  # ลดระยะห่างให้ใกล้กับข้อความด้านล่าง
+
+        # คืน rotation เดิมทุกหน้า
+        for i, rot in _orig_rotations.items():
+            if rot != 0:
+                pdf[i].set_rotation(rot)
 
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_pdf:
             pdf.save(tmp_pdf.name)
@@ -1094,6 +1123,9 @@ def receive_num():
             return jsonify({'error': 'Page out of range'}), 400
         page = doc[page_no]
 
+        # Normalize page rotation เพื่อให้ stamp อยู่ตำแหน่งถูกต้อง
+        orig_rotation = normalize_page_rotation(page)
+
         # ฟอนต์
         font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew.ttf")
         bold_font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew Bold.ttf")
@@ -1198,14 +1230,17 @@ def receive_num():
             print(f"[DEBUG] Position: center_x={center_x}, y={y_pos}")
             paste_center(img, center_x, y_pos)
 
+        # คืน rotation เดิมก่อน save
+        if orig_rotation != 0:
+            page.set_rotation(orig_rotation)
+
         # ส่งไฟล์กลับ
         print("[DEBUG] Saving final PDF...")
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as outpdf:
             doc.save(outpdf.name)
         doc.close()
         print(f"[DEBUG] PDF saved, sending response...")
-        
-        # เพิ่ม debug response header
+
         response = send_file(outpdf.name, mimetype="application/pdf", as_attachment=True, download_name="receive_num.pdf")
         response.headers['X-Debug'] = 'receive_num_processed'
         return response
@@ -1245,6 +1280,9 @@ def receive_num2():
         if page_no >= len(doc):
             return jsonify({'error': 'Page out of range'}), 400
         page = doc[page_no]
+
+        # Normalize page rotation
+        orig_rotation = normalize_page_rotation(page)
 
         font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew.ttf")
         bold_font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew Bold.ttf")
@@ -1298,6 +1336,10 @@ def receive_num2():
         start_y = center_y - ((len(header_lines)-1) * gap // 2)
         for i, img in enumerate(text_imgs):
             paste_center(img, center_x, start_y + i*gap)
+
+        # คืน rotation เดิม
+        if orig_rotation != 0:
+            page.set_rotation(orig_rotation)
 
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as outpdf:
             doc.save(outpdf.name)
@@ -1367,6 +1409,9 @@ def stamp_summary():
         pdf_bytes = pdf_file.read()
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         page = doc[page_number]  # ใช้หน้าที่ระบุ
+
+        # Normalize page rotation
+        orig_rotation = normalize_page_rotation(page)
 
         # ฟอนต์ไทย
         font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew.ttf")
@@ -1854,13 +1899,17 @@ def stamp_summary():
         # วันที่ (กึ่งกลาง - ใช้ภาพที่สร้างไว้แล้ว)
         paste_at_position(img_date, center_x_frame - img_date.width//2, current_y)
 
+        # คืน rotation เดิม
+        if orig_rotation != 0:
+            page.set_rotation(orig_rotation)
+
         # ส่งไฟล์กลับ
         print("[DEBUG] Saving final PDF...")
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as outpdf:
             doc.save(outpdf.name)
             doc.close()
             print(f"[DEBUG] PDF saved, sending response...")
-            
+
             response = send_file(outpdf.name, mimetype="application/pdf", as_attachment=True, download_name="summary_stamped.pdf")
             response.headers['X-Debug'] = 'stamp_summary_processed'
             return response
@@ -1951,6 +2000,11 @@ def add_signature_receive():
 
         pdf_bytes = pdf_file.read()
         pdf = fitz.open(stream=pdf_bytes, filetype="pdf")
+
+        # Normalize rotation ทุกหน้า
+        _orig_rotations = {}
+        for i in range(len(pdf)):
+            _orig_rotations[i] = normalize_page_rotation(pdf[i])
 
         from collections import defaultdict
         sig_dict = defaultdict(list)
