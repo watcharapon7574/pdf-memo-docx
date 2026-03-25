@@ -120,9 +120,9 @@ def normalize_page_rotation(page):
 
 def get_page_scale(page):
     """คำนวณ scale factor เทียบกับ A4
-    ใช้ page.rect ซึ่งเป็น visual size แล้ว"""
-    page_w = page.rect.width
-    page_h = page.rect.height
+    ใช้ mediabox เพราะ insert_image ใช้ mediabox coordinates"""
+    page_w = page.mediabox.width
+    page_h = page.mediabox.height
     short_side = min(page_w, page_h)
     scale = short_side / A4_WIDTH_PT
     return scale
@@ -1123,8 +1123,8 @@ def receive_num():
 
 
         # Fix ตำแหน่งที่มุมขวาบนของกระดาษ
-        page_w = page.rect.width
-        page_h = page.rect.height
+        page_w = page.mediabox.width
+        page_h = page.mediabox.height
         ps = get_page_scale(page)
 
         # คำนวณตำแหน่งมุมขวาบน (scale ตาม page size)
@@ -1269,8 +1269,8 @@ def receive_num2():
         if not os.path.isfile(font_path) or not os.path.isfile(bold_font_path):
             return jsonify({'error': 'THSarabunNew fonts not found'}), 500
 
-        # page.rect ให้ visual size (หลัง rotation) อัตโนมัติ
-        page_w = page.rect.width
+        # ใช้ mediabox เพราะ insert_image/draw_rect ใช้ mediabox coordinates
+        page_w = page.mediabox.width
         ps = get_page_scale(page)
         margin = int(20 * ps)
 
@@ -1399,8 +1399,8 @@ def stamp_summary():
             return jsonify({'error': 'THSarabunNew fonts not found'}), 500
 
         # เตรียมข้อมูลสำหรับคำนวณความสูง
-        page_w = page.rect.width
-        page_h = page.rect.height
+        page_w = page.mediabox.width
+        page_h = page.mediabox.height
         ps = get_page_scale(page)
         margin = int(30 * ps)
         stamp_width = int(200 * ps)
