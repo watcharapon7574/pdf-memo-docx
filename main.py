@@ -112,20 +112,69 @@ def process_text_with_markers(text):
 A4_WIDTH_PT = 595.28
 A4_HEIGHT_PT = 841.89
 
-def normalize_page_rotation(page):
-    """No-op — fitz page.rect จัดการ rotation ให้อัตโนมัติแล้ว
-    page.rect จะเป็น visual size (หลัง rotation)
-    insert_image/draw_rect ใช้ page.rect coordinate ซึ่งตรงกับ visual"""
-    return page.rotation
-
 def get_page_scale(page):
-    """คำนวณ scale factor เทียบกับ A4
-    ใช้ mediabox เพราะ insert_image ใช้ mediabox coordinates"""
-    page_w = page.mediabox.width
-    page_h = page.mediabox.height
-    short_side = min(page_w, page_h)
-    scale = short_side / A4_WIDTH_PT
-    return scale
+    """คำนวณ scale factor เทียบกับ A4 ใช้ visual size (page.rect)"""
+    short_side = min(page.rect.width, page.rect.height)
+    return short_side / A4_WIDTH_PT
+
+def visual_to_mb_rect(page, vis_rect):
+    """แปลง visual rect → mediabox rect ด้วย derotation_matrix"""
+    if page.rotation == 0:
+        return vis_rect
+    mb = vis_rect * page.derotation_matrix
+    mb.normalize()
+    return mb
+
+def rotate_img_for_page(img, page):
+    """หมุน PIL image เพื่อ counteract page rotation ให้แสดงตรง"""
+    rotation = page.rotation
+    if rotation == 0:
+        return img
+    # หมุน image ตาม page rotation (ทิศเดียวกัน)
+    return img.rotate(rotation, expand=True)
+
+def insert_visual_image(page, img, vis_rect):
+    """Insert PIL image ที่ตำแหน่ง visual โดยจัดการ rotation อัตโนมัติ"""
+    rotated_img = rotate_img_for_page(img, page)
+    mb_rect = visual_to_mb_rect(page, vis_rect)
+    bio = io.BytesIO()
+    rotated_img.save(bio, format='PNG')
+    page.insert_image(mb_rect, stream=bio.getvalue())
+
+def draw_visual_rect(page, vis_rect, color=None, width=1):
+    """วาด rect ที่ตำแหน่ง visual โดยจัดการ rotation อัตโนมัติ"""
+    mb_rect = visual_to_mb_rect(page, vis_rect)
+    page.draw_rect(mb_rect, color=color, width=width)
+
+def patch_page_for_visual_coords(page):
+    """Patch page methods ให้ใช้ visual coordinates อัตโนมัติ
+    เรียกครั้งเดียวหลังเปิดหน้า — หลังจากนี้ insert_image/draw_rect จะแปลงพิกัดให้"""
+    if page.rotation == 0:
+        return  # ไม่ต้อง patch
+
+    _orig_insert_image = page.insert_image
+    _orig_draw_rect = page.draw_rect
+
+    def patched_insert_image(rect, **kwargs):
+        # ถ้ามี stream ที่เป็น PNG ให้หมุน image ก่อน
+        if 'stream' in kwargs and kwargs['stream']:
+            try:
+                img = Image.open(io.BytesIO(kwargs['stream']))
+                rotated = rotate_img_for_page(img, page)
+                bio = io.BytesIO()
+                rotated.save(bio, format='PNG')
+                kwargs['stream'] = bio.getvalue()
+            except:
+                pass
+        mb_rect = visual_to_mb_rect(page, rect)
+        return _orig_insert_image(mb_rect, **kwargs)
+
+    def patched_draw_rect(rect, **kwargs):
+        mb_rect = visual_to_mb_rect(page, rect)
+        return _orig_draw_rect(mb_rect, **kwargs)
+
+    page.insert_image = patched_insert_image
+    page.draw_rect = patched_draw_rect
 
 # --- ฟังก์ชันวาดข้อความเป็นภาพ ---
 def draw_text_image(text, font_path, font_size=20, color=(2, 53, 139), scale=1):
@@ -242,10 +291,6 @@ def add_signature():
         pdf_bytes = pdf_file.read()
         pdf = fitz.open(stream=pdf_bytes, filetype="pdf")
 
-        # Normalize rotation ทุกหน้า
-        orig_rotations = {}
-        for i in range(len(pdf)):
-            orig_rotations[i] = normalize_page_rotation(pdf[i])
 
         # --- กลุ่ม sig ตามตำแหน่ง (page, x, y) ---
         from collections import defaultdict
@@ -259,6 +304,7 @@ def add_signature():
         # --- วาดลายเซ็นและความเห็นทีละจุด ---
         for (page_number, x, y), sigs in sig_dict.items():
             page = pdf[page_number]
+            patch_page_for_visual_coords(page)
             sigs_sorted = sorted(sigs, key=lambda s: 0 if s['type'] == 'text' else 1)
             current_y = y
             for sig in sigs_sorted:
@@ -365,10 +411,6 @@ def add_signature_v2():
         pdf_bytes = pdf_file.read()
         pdf = fitz.open(stream=pdf_bytes, filetype="pdf")
 
-        # Normalize rotation ทุกหน้า
-        _orig_rotations = {}
-        for i in range(len(pdf)):
-            _orig_rotations[i] = normalize_page_rotation(pdf[i])
 
         from collections import defaultdict
         sig_dict = defaultdict(list)
@@ -390,7 +432,8 @@ def add_signature_v2():
 
         for (page_number, x, y, width, height), sigs in sig_dict.items():
             page = pdf[page_number]
-            
+            patch_page_for_visual_coords(page)
+
             # Debug: แสดงข้อมูล page และพิกัด
             page_rect = page.rect
             print(f"DEBUG: Page {page_number} - Size: {page_rect.width}x{page_rect.height}")
@@ -820,6 +863,7 @@ def generate_2in1_memo():
                 if page_number >= len(pdf):
                     continue  # ข้ามถ้าหน้าไม่มี
                 page = pdf[page_number]
+                patch_page_for_visual_coords(page)
                 current_y = y
                 has_lines = any('lines' in sig for sig in sigs)
                 
@@ -1109,113 +1153,54 @@ def receive_num():
         if page_no >= len(doc):
             return jsonify({'error': 'Page out of range'}), 400
         page = doc[page_no]
-
-        # Normalize page rotation เพื่อให้ stamp อยู่ตำแหน่งถูกต้อง
-        orig_rotation = normalize_page_rotation(page)
+        patch_page_for_visual_coords(page)
 
         # ฟอนต์
         font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew.ttf")
         bold_font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew Bold.ttf")
-        print(f"[DEBUG] Font paths: {font_path}, {bold_font_path}")
-        print(f"[DEBUG] Font exists: regular={os.path.isfile(font_path)}, bold={os.path.isfile(bold_font_path)}")
         if not os.path.isfile(font_path) or not os.path.isfile(bold_font_path):
             return jsonify({'error': 'THSarabunNew fonts not found'}), 500
 
-
-        # Fix ตำแหน่งที่มุมขวาบนของกระดาษ
-        page_w = page.mediabox.width
-        page_h = page.mediabox.height
+        # ใช้ visual size (page.rect) + helper functions จัดการ rotation
+        vis_w = page.rect.width
         ps = get_page_scale(page)
-
-        # คำนวณตำแหน่งมุมขวาบน (scale ตาม page size)
         margin = int(20 * ps)
         frame_width = int(200 * ps)
         frame_height = int(80 * ps)
-        
-        # ตำแหน่งกึ่งกลางตรายาง = มุมขวาบน - ขอบ - ครึ่งตรายาง
-        center_x = page_w - margin - frame_width//2
+
+        center_x = vis_w - margin - frame_width//2
         center_y = margin + frame_height//2
-        
-        print(f"[DEBUG] Page size: {page_w}x{page_h}")
-        print(f"[DEBUG] Fixed stamp position: center_x={center_x}, center_y={center_y}")
-        
-        # วาดกรอบสี่เหลี่ยมสีน้ำเงิน (เหมือนตรายาง)
-        box_left = center_x - frame_width//2
-        box_top = center_y - frame_height//2
-        box_right = center_x + frame_width//2
-        box_bottom = center_y + frame_height//2
-        
-        box_rect = fitz.Rect(box_left, box_top, box_right, box_bottom)
-        # ใช้สีเดียวกับฟอนต์ (สีน้ำเงินอ่อนลง)
-        box_color = (color[0]/255, color[1]/255, color[2]/255)  # แปลง RGB เป็น 0-1
-        page.draw_rect(box_rect, color=box_color, width=2)  # กรอบสีเดียวกับฟอนต์ หนา 1px
-        print(f"[DEBUG] Drew blue frame at {box_rect} with color {box_color}")
 
-        # *** ลบ test text ออก และใช้ตัวอย่างง่ายๆ ***
-        
-        # เส้นหัวข้อกรอบตรา 4 บรรทัด (หนา) - commented out for testing
-        """
-        header_lines = [
-            "ศูนย์การศึกษาพิเศษ เขตการศึกษา ๖ จ.ลพบุรี",
-            "เลขทะเบียนรับที่ ..........",
-            "วันที่ ........../............/............ เวลา ..........น.",
-            "ผู้รับ ........................"
-        ]
-        gap = int(bh/4)  # ระยะห่างแต่ละบรรทัดในกรอบ
+        box_rect = fitz.Rect(
+            center_x - frame_width//2, center_y - frame_height//2,
+            center_x + frame_width//2, center_y + frame_height//2
+        )
+        box_color = (color[0]/255, color[1]/255, color[2]/255)
+        draw_visual_rect(page, box_rect, color=box_color, width=2)
 
-        start_y = center_y - ( (len(header_lines)-1) * gap // 2 )
-        print(f"[DEBUG] start_y: {start_y}, gap: {gap}")
-        for i, text in enumerate(header_lines):
-            print(f"[DEBUG] Drawing header line {i}: {text}")
-            img = draw_text_img(text, size=16, bold=True)
-            y_pos = start_y + i*gap
-            print(f"[DEBUG] Position: center_x={center_x}, y={y_pos}")
-            paste_center(img, center_x, y_pos)
-        """
+        def draw_text_img(text, size=16, bold=False):
+            fp = bold_font_path if bold else font_path
+            return draw_text_image(to_thai_digits(text), fp, int(size * ps), color, scale=1)
 
-        # วาดข้อมูลตรา - ใช้ PyMuPDF text แทน PIL
         register_no = p.get('register_no','')
         date_text = p.get('date','')
         time_text = p.get('time','')
         receiver_text = p.get('receiver','')
-        
-        print(f"[DEBUG] Data to insert: register_no='{register_no}', date='{date_text}', time='{time_text}', receiver='{receiver_text}'")
-        
-        # ใช้วิธีเดียวกับ endpoint อื่น - draw_text_image + insert_image
-        def draw_text_img(text, size=18, bold=False):
-            fp = bold_font_path if bold else font_path
-            scaled_size = int(size * ps)
-            print(f"[DEBUG] Creating text image: '{text}', size={scaled_size} (base {size} * scale {ps:.2f}), bold={bold}")
-            img = draw_text_image(to_thai_digits(text), fp, scaled_size, color, scale=1)
-            print(f"[DEBUG] Text image created: {img.width}x{img.height}")
-            return img
 
-        def paste_center(img, center_x, center_y):
-            left = center_x - img.width//2
-            top  = center_y - img.height//2
-            rect = fitz.Rect(left, top, left+img.width, top+img.height)
-            print(f"[DEBUG] Pasting image at rect: {rect}, image size: {img.width}x{img.height}")
-            bio = io.BytesIO(); img.save(bio, format='PNG')
-            page.insert_image(rect, stream=bio.getvalue())
-            print(f"[DEBUG] Image inserted successfully")
-        
-        # เส้นหัวข้อกรอบตรา 4 บรรทัด (หนา)
         header_lines = [
             "ศูนย์การศึกษาพิเศษ เขตการศึกษา ๖ จ.ลพบุรี",
             f"เลขทะเบียนรับที่ {register_no}",
             f"วันที่ {date_text} เวลา {time_text}",
             f"ผู้รับ {receiver_text}"
         ]
-        gap = int(16 * ps)  # ระยะห่างแต่ละบรรทัด (scale ตาม page size)
+        gap = int(16 * ps)
 
-        start_y = center_y - ( (len(header_lines)-1) * gap // 2 )
-        print(f"[DEBUG] start_y: {start_y}, gap: {gap}")
+        start_y = center_y - ((len(header_lines)-1) * gap // 2)
         for i, text in enumerate(header_lines):
-            print(f"[DEBUG] Drawing header line {i}: {text}")
             img = draw_text_img(text, size=16, bold=True)
-            y_pos = start_y + i*gap
-            print(f"[DEBUG] Position: center_x={center_x}, y={y_pos}")
-            paste_center(img, center_x, y_pos)
+            left = center_x - img.width//2
+            top = start_y + i*gap - img.height//2
+            insert_visual_image(page, img, fitz.Rect(left, top, left+img.width, top+img.height))
 
         # ส่งไฟล์กลับ
         print("[DEBUG] Saving final PDF...")
@@ -1263,27 +1248,21 @@ def receive_num2():
         if page_no >= len(doc):
             return jsonify({'error': 'Page out of range'}), 400
         page = doc[page_no]
+        patch_page_for_visual_coords(page)
 
         font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew.ttf")
         bold_font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew Bold.ttf")
         if not os.path.isfile(font_path) or not os.path.isfile(bold_font_path):
             return jsonify({'error': 'THSarabunNew fonts not found'}), 500
 
-        # ใช้ mediabox เพราะ insert_image/draw_rect ใช้ mediabox coordinates
-        page_w = page.mediabox.width
+        # ใช้ visual size (page.rect) สำหรับคำนวณตำแหน่ง
+        vis_w = page.rect.width
         ps = get_page_scale(page)
         margin = int(20 * ps)
 
         def draw_text_img(text, size=16, bold=False):
             fp = bold_font_path if bold else font_path
             return draw_text_image(to_thai_digits(text), fp, int(size * ps), color, scale=1)
-
-        def paste_center(img, cx, cy):
-            left = cx - img.width//2
-            top  = cy - img.height//2
-            rect = fitz.Rect(left, top, left+img.width, top+img.height)
-            bio = io.BytesIO(); img.save(bio, format='PNG')
-            page.insert_image(rect, stream=bio.getvalue())
 
         group_name = p.get('group_name', '')
         register_no = p.get('register_no', '')
@@ -1303,8 +1282,8 @@ def receive_num2():
         frame_width = max_text_width + padding * 2
         frame_height = len(header_lines) * gap + padding
 
-        # มุมขวาบน — ใช้ page.rect.width (visual width)
-        center_x = page_w - margin - frame_width//2
+        # มุมขวาบน — ใช้ visual width
+        center_x = vis_w - margin - frame_width//2
         center_y = margin + frame_height//2
 
         box_rect = fitz.Rect(
@@ -1312,13 +1291,16 @@ def receive_num2():
             center_x + frame_width//2, center_y + frame_height//2
         )
         box_color = (color[0]/255, color[1]/255, color[2]/255)
-        page.draw_rect(box_rect, color=box_color, width=2)
+        draw_visual_rect(page, box_rect, color=box_color, width=2)
 
         start_y = center_y - ((len(header_lines)-1) * gap // 2)
         for i, img in enumerate(text_imgs):
-            paste_center(img, center_x, start_y + i*gap)
+            left = center_x - img.width//2
+            top = start_y + i*gap - img.height//2
+            vis_rect = fitz.Rect(left, top, left+img.width, top+img.height)
+            insert_visual_image(page, img, vis_rect)
 
-        print(f"[DEBUG] Stamp at center=({center_x},{center_y}), page.rect={page.rect}, rotation={page.rotation}")
+        print(f"[DEBUG] Stamp at center=({center_x},{center_y}), vis_w={vis_w}, rotation={page.rotation}")
 
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as outpdf:
             doc.save(outpdf.name)
@@ -1388,9 +1370,7 @@ def stamp_summary():
         pdf_bytes = pdf_file.read()
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         page = doc[page_number]  # ใช้หน้าที่ระบุ
-
-        # Normalize page rotation
-        orig_rotation = normalize_page_rotation(page)
+        patch_page_for_visual_coords(page)
 
         # ฟอนต์ไทย
         font_path = os.path.join(os.path.dirname(__file__), "fonts", "THSarabunNew.ttf")
@@ -1399,8 +1379,8 @@ def stamp_summary():
             return jsonify({'error': 'THSarabunNew fonts not found'}), 500
 
         # เตรียมข้อมูลสำหรับคำนวณความสูง
-        page_w = page.mediabox.width
-        page_h = page.mediabox.height
+        vis_w = page.rect.width
+        vis_h = page.rect.height
         ps = get_page_scale(page)
         margin = int(30 * ps)
         stamp_width = int(200 * ps)
@@ -1806,17 +1786,15 @@ def stamp_summary():
             # แปลง Y จาก top position เป็น center position ใน PDF coordinate
             # adjusted_y = page_height - y + 30 (แปลง Y-axis)
             # center_y = adjusted_y + stamp_height/2 (เลื่อนลงครึ่งหนึ่งของความสูง)
-            adjusted_y = page_h - pos_y + 30
+            adjusted_y = vis_h - pos_y + 30
             center_y = adjusted_y + stamp_height // 2
 
-            print(f"[DEBUG] Using custom position (top-center): original=(x={pos_x}, y_top={pos_y})")
-            print(f"[DEBUG] Y-axis flip: y_top={pos_y} -> adjusted_y_top={adjusted_y} -> center_y={center_y}")
-            print(f"[DEBUG] Final center position: ({center_x}, {center_y}), stamp_height={stamp_height}")
+            print(f"[DEBUG] Using custom position: x={pos_x}, adjusted_y={adjusted_y}, center_y={center_y}")
         else:
             # ใช้ default position (มุมซ้ายล่าง)
             margin = 30
             center_x = margin + stamp_width//2
-            center_y = page_h - margin - stamp_height//2
+            center_y = vis_h - margin - stamp_height//2
             print(f"[DEBUG] Using default position (bottom-left): center=({center_x}, {center_y})")
 
         # วาดกรอบตรา
@@ -1830,13 +1808,11 @@ def stamp_summary():
 
         box_rect = fitz.Rect(box_left, box_top, box_right, box_bottom)
         box_color = (2/255, 53/255, 139/255)
-        page.draw_rect(box_rect, color=box_color, width=2)
+        draw_visual_rect(page, box_rect, color=box_color, width=2)
 
         def paste_at_position(img, x, y):
-            rect = fitz.Rect(x, y, x+img.width, y+img.height)
-            bio = io.BytesIO()
-            img.save(bio, format='PNG')
-            page.insert_image(rect, stream=bio.getvalue())
+            vis_rect = fitz.Rect(x, y, x+img.width, y+img.height)
+            insert_visual_image(page, img, vis_rect)
 
         # วาดข้อความในตรา (ใช้ภาพที่สร้างไว้แล้ว)
         text_margin = int(10 * ps)
@@ -1976,10 +1952,6 @@ def add_signature_receive():
         pdf_bytes = pdf_file.read()
         pdf = fitz.open(stream=pdf_bytes, filetype="pdf")
 
-        # Normalize rotation ทุกหน้า
-        _orig_rotations = {}
-        for i in range(len(pdf)):
-            _orig_rotations[i] = normalize_page_rotation(pdf[i])
 
         from collections import defaultdict
         sig_dict = defaultdict(list)
@@ -2001,6 +1973,7 @@ def add_signature_receive():
 
         for (page_number, x, y, width, height), sigs in sig_dict.items():
             page = pdf[page_number]
+            patch_page_for_visual_coords(page)
 
             # Debug: แสดงข้อมูล page และพิกัด
             page_rect = page.rect
