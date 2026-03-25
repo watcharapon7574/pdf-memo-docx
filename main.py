@@ -113,45 +113,17 @@ A4_WIDTH_PT = 595.28
 A4_HEIGHT_PT = 841.89
 
 def normalize_page_rotation(page):
-    """ไม่แก้ rotation — return rotation เดิมเพื่อ backward compat"""
+    """No-op — fitz page.rect จัดการ rotation ให้อัตโนมัติแล้ว
+    page.rect จะเป็น visual size (หลัง rotation)
+    insert_image/draw_rect ใช้ page.rect coordinate ซึ่งตรงกับ visual"""
     return page.rotation
 
-def get_visual_size(page):
-    """ได้ขนาดหน้าที่ผู้ใช้เห็นจริง (หลัง rotation)"""
-    rotation = page.rotation
-    w = page.mediabox.width
-    h = page.mediabox.height
-    if rotation in (90, 270):
-        return h, w  # สลับ
-    return w, h
-
-def stamp_top_right(page, frame_width, frame_height, margin):
-    """คำนวณตำแหน่ง center ของ stamp ที่มุมขวาบน (visual)
-    แปลงเป็นพิกัด PDF จริง (รองรับ rotation)"""
-    rotation = page.rotation
-    mb_w = page.mediabox.width
-    mb_h = page.mediabox.height
-    vis_w, vis_h = get_visual_size(page)
-
-    # ตำแหน่ง visual: มุมขวาบน
-    vis_cx = vis_w - margin - frame_width / 2
-    vis_cy = margin + frame_height / 2
-
-    # แปลงเป็นพิกัด PDF
-    if rotation == 0:
-        return vis_cx, vis_cy
-    elif rotation == 90:
-        return mb_w - vis_cy, vis_cx
-    elif rotation == 180:
-        return mb_w - vis_cx, mb_h - vis_cy
-    elif rotation == 270:
-        return vis_cy, mb_h - vis_cx
-    return vis_cx, vis_cy
-
 def get_page_scale(page):
-    """คำนวณ scale factor เทียบกับ A4"""
-    vis_w, vis_h = get_visual_size(page)
-    short_side = min(vis_w, vis_h)
+    """คำนวณ scale factor เทียบกับ A4
+    ใช้ page.rect ซึ่งเป็น visual size แล้ว"""
+    page_w = page.rect.width
+    page_h = page.rect.height
+    short_side = min(page_w, page_h)
     scale = short_side / A4_WIDTH_PT
     return scale
 
@@ -1297,72 +1269,56 @@ def receive_num2():
         if not os.path.isfile(font_path) or not os.path.isfile(bold_font_path):
             return jsonify({'error': 'THSarabunNew fonts not found'}), 500
 
-        rotation = page.rotation
+        # page.rect ให้ visual size (หลัง rotation) อัตโนมัติ
+        page_w = page.rect.width
         ps = get_page_scale(page)
-        vis_w, vis_h = get_visual_size(page)
         margin = int(20 * ps)
+
+        def draw_text_img(text, size=16, bold=False):
+            fp = bold_font_path if bold else font_path
+            return draw_text_image(to_thai_digits(text), fp, int(size * ps), color, scale=1)
+
+        def paste_center(img, cx, cy):
+            left = cx - img.width//2
+            top  = cy - img.height//2
+            rect = fitz.Rect(left, top, left+img.width, top+img.height)
+            bio = io.BytesIO(); img.save(bio, format='PNG')
+            page.insert_image(rect, stream=bio.getvalue())
 
         group_name = p.get('group_name', '')
         register_no = p.get('register_no', '')
         date_text = p.get('date', '')
 
         header_lines = [
-            to_thai_digits(group_name),
-            to_thai_digits(f"เลขรับ {register_no}"),
-            to_thai_digits(f"วันที่ {date_text}")
+            group_name,
+            f"เลขรับ {register_no}",
+            f"วันที่ {date_text}"
         ]
 
-        # สร้าง stamp เป็น PIL image ทั้งก้อน
-        from PIL import ImageFont, ImageDraw
-        font_size = int(16 * ps)
-        font = ImageFont.truetype(bold_font_path, font_size)
+        text_imgs = [draw_text_img(text, size=16, bold=True) for text in header_lines]
+        max_text_width = max(img.width for img in text_imgs)
         padding = int(20 * ps)
         gap = int(16 * ps)
-        border = 2
 
-        # วัดขนาด text
-        dummy = Image.new("RGBA", (10, 10))
-        dd = ImageDraw.Draw(dummy)
-        text_widths = [dd.textbbox((0, 0), line, font=font)[2] for line in header_lines]
-        max_text_width = max(text_widths)
+        frame_width = max_text_width + padding * 2
+        frame_height = len(header_lines) * gap + padding
 
-        frame_w = max_text_width + padding * 2
-        frame_h = len(header_lines) * gap + padding
+        # มุมขวาบน — ใช้ page.rect.width (visual width)
+        center_x = page_w - margin - frame_width//2
+        center_y = margin + frame_height//2
 
-        # วาด stamp image
-        stamp_img = Image.new("RGBA", (frame_w, frame_h), (255, 255, 255, 0))
-        draw = ImageDraw.Draw(stamp_img)
-        # กรอบ
-        draw.rectangle([border, border, frame_w - border, frame_h - border],
-                       outline=color, width=border)
-        # ข้อความ
-        start_y_text = (frame_h - len(header_lines) * gap) // 2
-        for i, line in enumerate(header_lines):
-            tw = dd.textbbox((0, 0), line, font=font)[2]
-            tx = (frame_w - tw) // 2
-            draw.text((tx, start_y_text + i * gap), line, font=font, fill=color)
-
-        # หมุน stamp image ตาม page rotation
-        if rotation == 90:
-            stamp_img = stamp_img.rotate(90, expand=True)
-        elif rotation == 180:
-            stamp_img = stamp_img.rotate(180, expand=True)
-        elif rotation == 270:
-            stamp_img = stamp_img.rotate(270, expand=True)
-
-        # คำนวณตำแหน่ง visual มุมขวาบน แล้วแปลงเป็นพิกัด PDF
-        pdf_cx, pdf_cy = stamp_top_right(page, frame_w, frame_h, margin)
-        # insert_image ใช้ rect ขนาดของ rotated stamp
-        sw, sh = stamp_img.size
-        insert_rect = fitz.Rect(
-            pdf_cx - sw / 2, pdf_cy - sh / 2,
-            pdf_cx + sw / 2, pdf_cy + sh / 2
+        box_rect = fitz.Rect(
+            center_x - frame_width//2, center_y - frame_height//2,
+            center_x + frame_width//2, center_y + frame_height//2
         )
+        box_color = (color[0]/255, color[1]/255, color[2]/255)
+        page.draw_rect(box_rect, color=box_color, width=2)
 
-        bio = io.BytesIO()
-        stamp_img.save(bio, format='PNG')
-        page.insert_image(insert_rect, stream=bio.getvalue())
-        print(f"[DEBUG] Stamp inserted at rect={insert_rect}, rotation={rotation}, stamp_size={sw}x{sh}")
+        start_y = center_y - ((len(header_lines)-1) * gap // 2)
+        for i, img in enumerate(text_imgs):
+            paste_center(img, center_x, start_y + i*gap)
+
+        print(f"[DEBUG] Stamp at center=({center_x},{center_y}), page.rect={page.rect}, rotation={page.rotation}")
 
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as outpdf:
             doc.save(outpdf.name)
