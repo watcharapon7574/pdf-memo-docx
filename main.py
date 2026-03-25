@@ -147,34 +147,8 @@ def draw_visual_rect(page, vis_rect, color=None, width=1):
     page.draw_rect(mb_rect, color=color, width=width)
 
 def patch_page_for_visual_coords(page):
-    """Patch page methods ให้ใช้ visual coordinates อัตโนมัติ
-    เรียกครั้งเดียวหลังเปิดหน้า — หลังจากนี้ insert_image/draw_rect จะแปลงพิกัดให้"""
-    if page.rotation == 0:
-        return  # ไม่ต้อง patch
-
-    _orig_insert_image = page.insert_image
-    _orig_draw_rect = page.draw_rect
-
-    def patched_insert_image(rect, **kwargs):
-        # ถ้ามี stream ที่เป็น PNG ให้หมุน image ก่อน
-        if 'stream' in kwargs and kwargs['stream']:
-            try:
-                img = Image.open(io.BytesIO(kwargs['stream']))
-                rotated = rotate_img_for_page(img, page)
-                bio = io.BytesIO()
-                rotated.save(bio, format='PNG')
-                kwargs['stream'] = bio.getvalue()
-            except:
-                pass
-        mb_rect = visual_to_mb_rect(page, rect)
-        return _orig_insert_image(mb_rect, **kwargs)
-
-    def patched_draw_rect(rect, **kwargs):
-        mb_rect = visual_to_mb_rect(page, rect)
-        return _orig_draw_rect(mb_rect, **kwargs)
-
-    page.insert_image = patched_insert_image
-    page.draw_rect = patched_draw_rect
+    """No-op — ใช้ helper functions (insert_visual_image, draw_visual_rect) แทน"""
+    pass
 
 # --- ฟังก์ชันวาดข้อความเป็นภาพ ---
 def draw_text_image(text, font_path, font_size=20, color=(2, 53, 139), scale=1):
