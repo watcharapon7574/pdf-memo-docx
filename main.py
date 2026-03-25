@@ -113,19 +113,24 @@ A4_WIDTH_PT = 595.28
 A4_HEIGHT_PT = 841.89
 
 def normalize_page_rotation(page):
-    """ลบ rotation ออกจากหน้า PDF ก่อน stamp เพื่อให้พิกัดถูกต้อง
-    Return: rotation เดิม (เพื่อคืนค่าทีหลังถ้าต้องการ)"""
+    """หมุน content จริงให้ตรงกับ visual แล้วลบ rotation metadata ออก
+    ใช้ wrap_contents() เพื่อ bake rotation เข้าไปใน content stream
+    หลังจากนี้ page จะไม่มี rotation และพิกัดจะตรงกับที่ผู้ใช้เห็น"""
     rotation = page.rotation
     if rotation != 0:
-        print(f"[DEBUG] Page has rotation: {rotation}°, normalizing to 0°")
+        print(f"[DEBUG] Page rotation={rotation}°, mediabox={page.mediabox}")
+        # wrap_contents จะเพิ่ม transformation matrix ใน content stream
+        # ให้ content หมุนตาม rotation metadata
+        page.wrap_contents()
+        # ตอนนี้ content หมุนแล้ว สามารถลบ rotation ออกได้
         page.set_rotation(0)
+        print(f"[DEBUG] After normalize: rotation={page.rotation}°, rect={page.rect}")
     return rotation
 
 def get_page_scale(page):
     """คำนวณ scale factor เทียบกับ A4 เพื่อให้ stamp ขนาดเท่ากันทุก page size"""
     page_w = page.rect.width
     page_h = page.rect.height
-    # ใช้ด้านที่สั้นกว่าเทียบกับ A4 width (portrait)
     short_side = min(page_w, page_h)
     scale = short_side / A4_WIDTH_PT
     return scale
@@ -297,11 +302,6 @@ def add_signature():
                     rect = fitz.Rect(x, current_y, x + new_width, current_y + fixed_height)
                     page.insert_image(rect, stream=img_byte_arr.getvalue())
                     current_y += fixed_height
-
-        # คืน rotation เดิมทุกหน้า
-        for i, rot in orig_rotations.items():
-            if rot != 0:
-                pdf[i].set_rotation(rot)
 
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_pdf:
             pdf.save(tmp_pdf.name)
@@ -658,11 +658,6 @@ def add_signature_v2():
                         rect = fitz.Rect(x, current_y, x + new_width, current_y + fixed_height)
                         page.insert_image(rect, stream=img_byte_arr.getvalue())
                         current_y += fixed_height - 10  # ลดระยะห่างให้ใกล้กับข้อความด้านล่าง
-
-        # คืน rotation เดิมทุกหน้า
-        for i, rot in _orig_rotations.items():
-            if rot != 0:
-                pdf[i].set_rotation(rot)
 
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_pdf:
             pdf.save(tmp_pdf.name)
@@ -1230,10 +1225,6 @@ def receive_num():
             print(f"[DEBUG] Position: center_x={center_x}, y={y_pos}")
             paste_center(img, center_x, y_pos)
 
-        # คืน rotation เดิมก่อน save
-        if orig_rotation != 0:
-            page.set_rotation(orig_rotation)
-
         # ส่งไฟล์กลับ
         print("[DEBUG] Saving final PDF...")
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as outpdf:
@@ -1336,10 +1327,6 @@ def receive_num2():
         start_y = center_y - ((len(header_lines)-1) * gap // 2)
         for i, img in enumerate(text_imgs):
             paste_center(img, center_x, start_y + i*gap)
-
-        # คืน rotation เดิม
-        if orig_rotation != 0:
-            page.set_rotation(orig_rotation)
 
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as outpdf:
             doc.save(outpdf.name)
@@ -1898,10 +1885,6 @@ def stamp_summary():
 
         # วันที่ (กึ่งกลาง - ใช้ภาพที่สร้างไว้แล้ว)
         paste_at_position(img_date, center_x_frame - img_date.width//2, current_y)
-
-        # คืน rotation เดิม
-        if orig_rotation != 0:
-            page.set_rotation(orig_rotation)
 
         # ส่งไฟล์กลับ
         print("[DEBUG] Saving final PDF...")
