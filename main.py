@@ -108,6 +108,19 @@ def process_text_with_markers(text):
 
     return lines if lines else [text]
 
+# --- ฟังก์ชันคำนวณ scale จากขนาดหน้า PDF ---
+A4_WIDTH_PT = 595.28
+A4_HEIGHT_PT = 841.89
+
+def get_page_scale(page):
+    """คำนวณ scale factor เทียบกับ A4 เพื่อให้ stamp ขนาดเท่ากันทุก page size"""
+    page_w = page.rect.width
+    page_h = page.rect.height
+    # ใช้ด้านที่สั้นกว่าเทียบกับ A4 width (portrait)
+    short_side = min(page_w, page_h)
+    scale = short_side / A4_WIDTH_PT
+    return scale
+
 # --- ฟังก์ชันวาดข้อความเป็นภาพ ---
 def draw_text_image(text, font_path, font_size=20, color=(2, 53, 139), scale=1):
     from PIL import ImageFont, ImageDraw
@@ -1093,11 +1106,12 @@ def receive_num():
         # Fix ตำแหน่งที่มุมขวาบนของกระดาษ
         page_w = page.rect.width
         page_h = page.rect.height
-        
-        # คำนวณตำแหน่งมุมขวาบน (เว้นขอบเล็กน้อย)
-        margin = 20  # เว้นขอบ 20 pixel
-        frame_width = 200
-        frame_height = 80
+        ps = get_page_scale(page)
+
+        # คำนวณตำแหน่งมุมขวาบน (scale ตาม page size)
+        margin = int(20 * ps)
+        frame_width = int(200 * ps)
+        frame_height = int(80 * ps)
         
         # ตำแหน่งกึ่งกลางตรายาง = มุมขวาบน - ขอบ - ครึ่งตรายาง
         center_x = page_w - margin - frame_width//2
@@ -1151,8 +1165,9 @@ def receive_num():
         # ใช้วิธีเดียวกับ endpoint อื่น - draw_text_image + insert_image
         def draw_text_img(text, size=18, bold=False):
             fp = bold_font_path if bold else font_path
-            print(f"[DEBUG] Creating text image: '{text}', size={size}, bold={bold}, font={fp}")
-            img = draw_text_image(to_thai_digits(text), fp, size, color, scale=1)
+            scaled_size = int(size * ps)
+            print(f"[DEBUG] Creating text image: '{text}', size={scaled_size} (base {size} * scale {ps:.2f}), bold={bold}")
+            img = draw_text_image(to_thai_digits(text), fp, scaled_size, color, scale=1)
             print(f"[DEBUG] Text image created: {img.width}x{img.height}")
             return img
 
@@ -1172,7 +1187,7 @@ def receive_num():
             f"วันที่ {date_text} เวลา {time_text}",
             f"ผู้รับ {receiver_text}"
         ]
-        gap = 16  # ระยะห่างแต่ละบรรทัดใหม่ (แทนที่ bh/4 ที่มากเกินไป)
+        gap = int(16 * ps)  # ระยะห่างแต่ละบรรทัด (scale ตาม page size)
 
         start_y = center_y - ( (len(header_lines)-1) * gap // 2 )
         print(f"[DEBUG] start_y: {start_y}, gap: {gap}")
@@ -1237,11 +1252,12 @@ def receive_num2():
             return jsonify({'error': 'THSarabunNew fonts not found'}), 500
 
         page_w = page.rect.width
-        margin = 20
+        ps = get_page_scale(page)
+        margin = int(20 * ps)
 
         def draw_text_img(text, size=16, bold=False):
             fp = bold_font_path if bold else font_path
-            return draw_text_image(to_thai_digits(text), fp, size, color, scale=1)
+            return draw_text_image(to_thai_digits(text), fp, int(size * ps), color, scale=1)
 
         def paste_center(img, cx, cy):
             left = cx - img.width//2
@@ -1263,8 +1279,8 @@ def receive_num2():
         # สร้าง text image ก่อน เพื่อวัดความกว้างจริง
         text_imgs = [draw_text_img(text, size=16, bold=True) for text in header_lines]
         max_text_width = max(img.width for img in text_imgs)
-        padding = 20  # เว้นขอบซ้ายขวาในกรอบ
-        gap = 16
+        padding = int(20 * ps)
+        gap = int(16 * ps)
 
         frame_width = max_text_width + padding * 2
         frame_height = len(header_lines) * gap + padding
@@ -1361,8 +1377,9 @@ def stamp_summary():
         # เตรียมข้อมูลสำหรับคำนวณความสูง
         page_w = page.rect.width
         page_h = page.rect.height
-        margin = 30
-        stamp_width = 200
+        ps = get_page_scale(page)
+        margin = int(30 * ps)
+        stamp_width = int(200 * ps)
         
         # ข้อมูลที่จะแสดงในตรา
         header_text = "เรียน ผอ. ศกศ.เขต ๖ จ.ลพบุรี"
@@ -1375,6 +1392,7 @@ def stamp_summary():
             from PIL import ImageFont, ImageDraw, Image
             fp = bold_font_path if bold else font_path
             color_rgb = (2, 53, 139)  # สีน้ำเงิน
+            # Note: size is already scaled by caller (font_size = int(16 * ps))
             text = to_thai_digits(text)
 
             # ถ้าไม่มี max_width ใช้วิธีเดิม
@@ -1447,9 +1465,9 @@ def stamp_summary():
             if current_line:
                 lines.append(current_line)
 
-            # คำนวณขนาดภาพ
+            # คำนวณขนาดภาพ — ใช้ความสูงตาม font size (size มาจาก font_size ที่ scale แล้ว)
             max_line_width = 0
-            fixed_line_height = 14  # ใช้ความสูงคงที่
+            fixed_line_height = max(14, int(size * 0.875))  # สัดส่วน 14/16 = 0.875
 
             for line in lines:
                 bbox = font.getbbox(line)
@@ -1597,8 +1615,8 @@ def stamp_summary():
             return lines
 
         # สร้างข้อความทั้งหมดก่อนเพื่อคำนวณความสูงจริง
-        font_size = 16
-        text_max_width = stamp_width - 20  # เว้นขอบซ้าย-ขวา 10 px
+        font_size = int(16 * ps)
+        text_max_width = stamp_width - int(20 * ps)  # เว้นขอบซ้าย-ขวา
 
         # สร้างภาพข้อความทั้งหมดก่อน
         text1 = "เรียน ผอ. ศกศ.เขต ๖ จ.ลพบุรี"
@@ -1609,7 +1627,7 @@ def stamp_summary():
             from PIL import ImageFont, ImageDraw, Image
             color_rgb = (2, 53, 139)
             padding = 4
-            fixed_line_height = 14
+            fixed_line_height = max(14, int(size * 0.875))
 
             # แปลงเป็นเลขไทย
             prefix = to_thai_digits(prefix)
@@ -1724,7 +1742,7 @@ def stamp_summary():
         img_assign = draw_mixed_text_img("เห็นควรมอบ", group_name, size=font_size, max_width=text_max_width)
 
         sign_img_temp = Image.open(sign_file)
-        sign_height = 30
+        sign_height = int(30 * ps)
         ratio = sign_height / sign_img_temp.height
         sign_width = int(sign_img_temp.width * ratio)
         sign_img = sign_img_temp.resize((sign_width, sign_height), Image.LANCZOS)
@@ -1739,9 +1757,9 @@ def stamp_summary():
         img_date = draw_text_img(date_text_str, size=font_size, bold=False)
 
         # คำนวณความสูงจริงตามที่จะใช้ในการวาด
-        padding_top = 8
-        padding_bottom = 8
-        line_height = 14
+        padding_top = int(8 * ps)
+        padding_bottom = int(8 * ps)
+        line_height = int(14 * ps)
 
         total_height = padding_top
         total_height += line_height  # เรียน ผอ.
@@ -1797,35 +1815,35 @@ def stamp_summary():
             page.insert_image(rect, stream=bio.getvalue())
 
         # วาดข้อความในตรา (ใช้ภาพที่สร้างไว้แล้ว)
-        # ใช้ระยะห่างแบบเดิม
-        line_height = 14
+        text_margin = int(10 * ps)
         current_y = box_top + padding_top
 
         # เรียน ผอ.
-        paste_at_position(img1, box_left + 10, current_y)
+        paste_at_position(img1, box_left + text_margin, current_y)
         current_y += line_height
 
         # เรื่อง + summary
-        paste_at_position(img_subject, box_left + 10, current_y)
+        paste_at_position(img_subject, box_left + text_margin, current_y)
         # ใช้ความสูงจริงของภาพ + ระยะห่างเล็กน้อย
         current_y += img_subject.height + 2
 
         # เห็นควรมอบ + group_name
-        paste_at_position(img_assign, box_left + 10, current_y)
+        paste_at_position(img_assign, box_left + text_margin, current_y)
         current_y += img_assign.height + 2
 
         # ลายเซ็น (ใช้ภาพที่สร้างไว้แล้ว)
         center_x_frame = box_left + stamp_width//2
 
         # คำนวณตำแหน่งเริ่มต้นให้อยู่กึ่งกลาง
-        total_width = img_sign_text.width + 5 + sign_width
+        sign_gap = int(5 * ps)
+        total_width = img_sign_text.width + sign_gap + sign_width
         start_x = center_x_frame - total_width//2
 
         sign_y = current_y
         # วาง "ลงชื่อ" ก่อน
         paste_at_position(img_sign_text, start_x, sign_y)
         # วางลายเซ็นติดข้าง
-        paste_at_position(sign_img, start_x + img_sign_text.width + 5, sign_y)
+        paste_at_position(sign_img, start_x + img_sign_text.width + sign_gap, sign_y)
 
         current_y += line_height + 2
 
