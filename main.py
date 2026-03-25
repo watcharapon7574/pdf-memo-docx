@@ -133,6 +133,20 @@ def rotate_img_for_page(img, page):
     # หมุน image ตาม page rotation (ทิศเดียวกัน)
     return img.rotate(rotation, expand=True)
 
+def apply_sig_rotation(img, rotation):
+    """หมุน PIL image ตาม rotation ของ signature pin (0/90/180/270)"""
+    if not rotation or rotation == 0:
+        return img
+    # PIL rotate ใช้ทิศ CCW — rotation 90 จาก user = หมุน CW 90° = PIL rotate(-90)
+    return img.rotate(-rotation, expand=True)
+
+def save_rotated_png(img, rotation=0):
+    """Save PIL image as PNG bytes พร้อมหมุนตาม rotation"""
+    rotated = apply_sig_rotation(img, rotation)
+    bio = io.BytesIO()
+    rotated.save(bio, format='PNG')
+    return bio.getvalue(), rotated.width, rotated.height
+
 def insert_visual_image(page, img, vis_rect):
     """Insert PIL image ที่ตำแหน่ง visual โดยจัดการ rotation อัตโนมัติ"""
     rotated_img = rotate_img_for_page(img, page)
@@ -443,6 +457,11 @@ def add_signature_v2():
                 print(f"DEBUG: Using top-left positioning - adjusted coordinates")
             
             current_y = center_y  # ใช้ค่า Y ที่ปรับแล้ว
+            # อ่าน rotation จาก sig
+            sig_rotation = int(sigs[0].get('rotation', 0))
+            if sig_rotation:
+                print(f"DEBUG: Signature rotation: {sig_rotation}°")
+
             # Check if any signature has 'lines' field
             has_lines = any('lines' in sig for sig in sigs)
             if has_lines:
@@ -494,6 +513,10 @@ def add_signature_v2():
                             ratio = fixed_height / img.height
                             new_width = int(img.width * ratio)
                             img = img.resize((new_width, fixed_height), resample=Image.LANCZOS)
+                            # หมุนลายเซ็นตาม pin rotation
+                            if sig_rotation:
+                                img = apply_sig_rotation(img, sig_rotation)
+                                new_width, fixed_height = img.size
                             img_byte_arr = io.BytesIO()
                             img.save(img_byte_arr, format='PNG')
                             # ใช้ center positioning ถ้ามี width/height
@@ -525,9 +548,12 @@ def add_signature_v2():
                                     ratio = fixed_height / img.height
                                     new_width = int(img.width * ratio)
                                     img = img.resize((new_width, fixed_height), resample=Image.LANCZOS)
+                                    if sig_rotation:
+                                        img = apply_sig_rotation(img, sig_rotation)
+                                        new_width, fixed_height = img.size
                                     img_byte_arr = io.BytesIO()
                                     img.save(img_byte_arr, format='PNG')
-                                    
+
                                     if is_center_positioning:
                                         left_x = center_x - new_width // 2  # คืนค่าเดิม แต่เพิ่ม debug
                                         top_y = current_y
@@ -893,6 +919,9 @@ def generate_2in1_memo():
                                         ratio = fixed_height / img.height
                                         new_width = int(img.width * ratio)
                                         img = img.resize((new_width, fixed_height), resample=Image.LANCZOS)
+                                        if sig_rotation:
+                                            img = apply_sig_rotation(img, sig_rotation)
+                                            new_width, fixed_height = img.size
                                         img_byte_arr = io.BytesIO()
                                         img.save(img_byte_arr, format='PNG')
                                         left_x = x - new_width // 2
@@ -1983,6 +2012,11 @@ def add_signature_receive():
                 print(f"DEBUG: Using top-left positioning - adjusted coordinates")
 
             current_y = center_y  # ใช้ค่า Y ที่ปรับแล้ว
+            # อ่าน rotation จาก sig
+            sig_rotation = int(sigs[0].get('rotation', 0))
+            if sig_rotation:
+                print(f"DEBUG: Signature rotation: {sig_rotation}°")
+
             # Check if any signature has 'lines' field
             has_lines = any('lines' in sig for sig in sigs)
             if has_lines:
@@ -2028,6 +2062,10 @@ def add_signature_receive():
                             ratio = fixed_height / img.height
                             new_width = int(img.width * ratio)
                             img = img.resize((new_width, fixed_height), resample=Image.LANCZOS)
+                            # หมุนลายเซ็นตาม pin rotation
+                            if sig_rotation:
+                                img = apply_sig_rotation(img, sig_rotation)
+                                new_width, fixed_height = img.size
                             img_byte_arr = io.BytesIO()
                             img.save(img_byte_arr, format='PNG')
                             # ใช้ center positioning ถ้ามี width/height
