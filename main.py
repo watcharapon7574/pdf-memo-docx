@@ -153,7 +153,7 @@ def insert_visual_image(page, img, vis_rect):
     mb_rect = visual_to_mb_rect(page, vis_rect)
     bio = io.BytesIO()
     rotated_img.save(bio, format='PNG')
-    page.insert_image(mb_rect, stream=bio.getvalue())
+    page.insert_image(mb_rect, stream=bio.getvalue(), overlay=True)
 
 def draw_visual_rect(page, vis_rect, color=None, width=1):
     """วาด rect ที่ตำแหน่ง visual โดยจัดการ rotation อัตโนมัติ"""
@@ -311,7 +311,7 @@ def add_signature():
                     img_byte_arr = io.BytesIO()
                     img.save(img_byte_arr, format='PNG')
                     rect = fitz.Rect(x, current_y, x + img.width, current_y + img.height)
-                    page.insert_image(rect, stream=img_byte_arr.getvalue())
+                    page.insert_image(rect, stream=img_byte_arr.getvalue(), overlay=True)
                     current_y += img.height
                 elif sig['type'] == 'image':
                     file_key = sig['file_key']
@@ -326,7 +326,7 @@ def add_signature():
                     img_byte_arr = io.BytesIO()
                     img.save(img_byte_arr, format='PNG')
                     rect = fitz.Rect(x, current_y, x + new_width, current_y + fixed_height)
-                    page.insert_image(rect, stream=img_byte_arr.getvalue())
+                    page.insert_image(rect, stream=img_byte_arr.getvalue(), overlay=True)
                     current_y += fixed_height
 
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_pdf:
@@ -399,6 +399,23 @@ def add_signature_v2():
         pdf_bytes = pdf_file.read()
         pdf = fitz.open(stream=pdf_bytes, filetype="pdf")
 
+        # --- Workaround: สำหรับ scanned PDF ที่ insert_image ถูกรูปสแกนทับ ---
+        # Rasterize ทุกหน้าที่จะมีลายเซ็นก่อน เพื่อ flatten content เป็น image เดียว
+        # แล้วค่อย insert_image ลายเซ็นทับบน page ที่ clean แล้ว
+        signatures_list = json.loads(request.form['signatures'])
+        pages_needing_sig = set(int(s.get('page', 0)) for s in signatures_list)
+        for pn in pages_needing_sig:
+            if pn < len(pdf):
+                old_page = pdf[pn]
+                page_rect = old_page.rect
+                # Rasterize หน้าเดิมที่ 200 DPI
+                pix = old_page.get_pixmap(dpi=150)
+                img_bytes = pix.tobytes("png")
+                # ลบหน้าเก่า แล้วสร้างหน้าใหม่ที่ตำแหน่งเดิม
+                pdf.delete_page(pn)
+                new_page = pdf.new_page(pno=pn, width=page_rect.width, height=page_rect.height)
+                new_page.insert_image(new_page.rect, stream=img_bytes)
+                print(f"DEBUG: Page {pn} rasterized at 150 DPI and rebuilt for clean overlay")
 
         from collections import defaultdict
         sig_dict = defaultdict(list)
@@ -409,13 +426,13 @@ def add_signature_v2():
             # รองรับ width/height สำหรับ center positioning
             width = sig.get('width', 0)
             height = sig.get('height', 0)
-            
+
             # ถ้าไม่มี width/height ให้ใช้ค่า default สำหรับ center positioning
             if width == 0 and height == 0:
                 width = 120  # default width
                 height = 60  # default height
                 print(f"DEBUG: Using default dimensions {width}x{height} for signature at ({x}, {y})")
-            
+
             sig_dict[(page_number, x, y, width, height)].append(sig)
 
         for (page_number, x, y, width, height), sigs in sig_dict.items():
@@ -496,7 +513,7 @@ def add_signature_v2():
                                 top_y = current_y
                             rect = fitz.Rect(left_x, top_y, left_x + img.width, top_y + img.height)
                             print(f"DEBUG: Text '{text}' placed at rect: {rect} (center_pos: {is_center_positioning})")
-                            page.insert_image(rect, stream=img_byte_arr.getvalue())
+                            page.insert_image(rect, stream=img_byte_arr.getvalue(), overlay=True)
                             if not is_center_positioning:
                                 num_lines = text.count('\n') + 1
                                 if num_lines == 1:
@@ -528,7 +545,7 @@ def add_signature_v2():
                                 top_y = current_y
                             rect = fitz.Rect(left_x, top_y, left_x + new_width, top_y + fixed_height)
                             print(f"DEBUG: Image placed at rect: {rect} (center_pos: {is_center_positioning})")
-                            page.insert_image(rect, stream=img_byte_arr.getvalue())
+                            page.insert_image(rect, stream=img_byte_arr.getvalue(), overlay=True)
                             if not is_center_positioning:
                                 current_y += fixed_height - 10  # ลดระยะห่างให้ใกล้กับข้อความด้านล่าง
                     else:
@@ -565,7 +582,7 @@ def add_signature_v2():
 
                                     rect = fitz.Rect(left_x, top_y, left_x + new_width, top_y + fixed_height)
                                     print(f"DEBUG: Image rect: {rect}")
-                                    page.insert_image(rect, stream=img_byte_arr.getvalue())
+                                    page.insert_image(rect, stream=img_byte_arr.getvalue(), overlay=True)
                                     current_y += fixed_height - 10  # ลดระยะห่างให้ใกล้กับข้อความด้านล่าง
                             else:
                                 # For text types: 'comment', 'name', 'position', 'academic_rank', 'org_structure_role', 'timestamp'
@@ -644,7 +661,7 @@ def add_signature_v2():
                                 print(f"DEBUG: Text '{text}' rect: {rect}")
                                 num_lines = text.count('\n') + 1
                                 print(f"DEBUG: Text has {num_lines} lines, img.height={img.height}")
-                                page.insert_image(rect, stream=img_byte_arr.getvalue())
+                                page.insert_image(rect, stream=img_byte_arr.getvalue(), overlay=True)
                                 # ถ้าเป็นบรรทัดเดียวใช้ fixed spacing, ถ้าหลายบรรทัดใช้ความสูงจริง
                                 if num_lines == 1:
                                     current_y += LINE_SPACING
@@ -672,7 +689,7 @@ def add_signature_v2():
                         img_byte_arr = io.BytesIO()
                         img.save(img_byte_arr, format='PNG')
                         rect = fitz.Rect(x, current_y, x + img.width, current_y + img.height)
-                        page.insert_image(rect, stream=img_byte_arr.getvalue())
+                        page.insert_image(rect, stream=img_byte_arr.getvalue(), overlay=True)
                         num_lines = text.count('\n') + 1
                         if num_lines == 1:
                             current_y += LINE_SPACING
@@ -691,7 +708,7 @@ def add_signature_v2():
                         img_byte_arr = io.BytesIO()
                         img.save(img_byte_arr, format='PNG')
                         rect = fitz.Rect(x, current_y, x + new_width, current_y + fixed_height)
-                        page.insert_image(rect, stream=img_byte_arr.getvalue())
+                        page.insert_image(rect, stream=img_byte_arr.getvalue(), overlay=True)
                         current_y += fixed_height - 10  # ลดระยะห่างให้ใกล้กับข้อความด้านล่าง
 
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_pdf:
@@ -889,7 +906,7 @@ def generate_2in1_memo():
                                 img.save(img_byte_arr, format='PNG')
                                 left_x = x - img.width // 2
                                 rect = fitz.Rect(left_x, current_y, left_x + img.width, current_y + img.height)
-                                page.insert_image(rect, stream=img_byte_arr.getvalue())
+                                page.insert_image(rect, stream=img_byte_arr.getvalue(), overlay=True)
                                 current_y += img.height
                             elif sig['type'] == 'image':
                                 file_key = sig['file_key']
@@ -904,7 +921,7 @@ def generate_2in1_memo():
                                     img.save(img_byte_arr, format='PNG')
                                     left_x = x - new_width // 2
                                     rect = fitz.Rect(left_x, current_y, left_x + new_width, current_y + fixed_height)
-                                    page.insert_image(rect, stream=img_byte_arr.getvalue())
+                                    page.insert_image(rect, stream=img_byte_arr.getvalue(), overlay=True)
                                     current_y += fixed_height
                         else:
                             # draw lines in order
@@ -926,7 +943,7 @@ def generate_2in1_memo():
                                         img.save(img_byte_arr, format='PNG')
                                         left_x = x - new_width // 2
                                         rect = fitz.Rect(left_x, current_y, left_x + new_width, current_y + fixed_height)
-                                        page.insert_image(rect, stream=img_byte_arr.getvalue())
+                                        page.insert_image(rect, stream=img_byte_arr.getvalue(), overlay=True)
                                         current_y += fixed_height
                                 else:
                                     text_value = line.get('text') or line.get('value') or line.get('comment') or ''
@@ -991,7 +1008,7 @@ def generate_2in1_memo():
                                     img.save(img_byte_arr, format='PNG')
                                     left_x = x - img.width // 2
                                     rect = fitz.Rect(left_x, current_y, left_x + img.width, current_y + img.height)
-                                    page.insert_image(rect, stream=img_byte_arr.getvalue())
+                                    page.insert_image(rect, stream=img_byte_arr.getvalue(), overlay=True)
                                     current_y += img.height
                 else:
                     # fallback to old logic
@@ -1014,7 +1031,7 @@ def generate_2in1_memo():
                             img.save(img_byte_arr, format='PNG')
                             left_x = x - img.width // 2
                             rect = fitz.Rect(left_x, current_y, left_x + img.width, current_y + img.height)
-                            page.insert_image(rect, stream=img_byte_arr.getvalue())
+                            page.insert_image(rect, stream=img_byte_arr.getvalue(), overlay=True)
                             current_y += img.height
                         elif sig['type'] == 'image':
                             file_key = sig['file_key']
@@ -1029,7 +1046,7 @@ def generate_2in1_memo():
                                 img.save(img_byte_arr, format='PNG')
                                 left_x = x - new_width // 2
                                 rect = fitz.Rect(left_x, current_y, left_x + new_width, current_y + fixed_height)
-                                page.insert_image(rect, stream=img_byte_arr.getvalue())
+                                page.insert_image(rect, stream=img_byte_arr.getvalue(), overlay=True)
                                 current_y += fixed_height
 
         # แยกลายเซ็นตามประเภท PDF
@@ -2049,7 +2066,7 @@ def add_signature_receive():
                                 top_y = current_y
                             rect = fitz.Rect(left_x, top_y, left_x + img.width, top_y + img.height)
                             print(f"DEBUG: Text '{text}' placed at rect: {rect} (center_pos: {is_center_positioning})")
-                            page.insert_image(rect, stream=img_byte_arr.getvalue())
+                            page.insert_image(rect, stream=img_byte_arr.getvalue(), overlay=True)
                             if not is_center_positioning:
                                 current_y += img.height
                         elif sig['type'] == 'image':
@@ -2077,7 +2094,7 @@ def add_signature_receive():
                                 top_y = current_y
                             rect = fitz.Rect(left_x, top_y, left_x + new_width, top_y + fixed_height)
                             print(f"DEBUG: Image placed at rect: {rect} (center_pos: {is_center_positioning})")
-                            page.insert_image(rect, stream=img_byte_arr.getvalue())
+                            page.insert_image(rect, stream=img_byte_arr.getvalue(), overlay=True)
                             if not is_center_positioning:
                                 current_y += fixed_height
                     else:
@@ -2111,7 +2128,7 @@ def add_signature_receive():
 
                                     rect = fitz.Rect(left_x, top_y, left_x + new_width, top_y + fixed_height)
                                     print(f"DEBUG: Image rect: {rect}")
-                                    page.insert_image(rect, stream=img_byte_arr.getvalue())
+                                    page.insert_image(rect, stream=img_byte_arr.getvalue(), overlay=True)
                                     current_y += fixed_height
                             else:
                                 # For text types: 'comment', 'name', 'position', 'academic_rank', 'org_structure_role', 'timestamp'
@@ -2186,7 +2203,7 @@ def add_signature_receive():
 
                                 rect = fitz.Rect(left_x, top_y, left_x + img.width, top_y + img.height)
                                 print(f"DEBUG: Text '{text}' rect: {rect}")
-                                page.insert_image(rect, stream=img_byte_arr.getvalue())
+                                page.insert_image(rect, stream=img_byte_arr.getvalue(), overlay=True)
                                 current_y += img.height
             else:
                 # fallback to old logic
@@ -2208,7 +2225,7 @@ def add_signature_receive():
                         img_byte_arr = io.BytesIO()
                         img.save(img_byte_arr, format='PNG')
                         rect = fitz.Rect(x, current_y, x + img.width, current_y + img.height)
-                        page.insert_image(rect, stream=img_byte_arr.getvalue())
+                        page.insert_image(rect, stream=img_byte_arr.getvalue(), overlay=True)
                         current_y += img.height
                     elif sig['type'] == 'image':
                         file_key = sig['file_key']
@@ -2223,7 +2240,7 @@ def add_signature_receive():
                         img_byte_arr = io.BytesIO()
                         img.save(img_byte_arr, format='PNG')
                         rect = fitz.Rect(x, current_y, x + new_width, current_y + fixed_height)
-                        page.insert_image(rect, stream=img_byte_arr.getvalue())
+                        page.insert_image(rect, stream=img_byte_arr.getvalue(), overlay=True)
                         current_y += fixed_height
 
         # ===== ส่วนที่ 2: เพิ่มตราสรุป (จาก /stamp_summary) =====
@@ -2575,7 +2592,7 @@ def add_signature_receive():
                 rect = fitz.Rect(x, y, x+img.width, y+img.height)
                 bio = io.BytesIO()
                 img.save(bio, format='PNG')
-                page.insert_image(rect, stream=bio.getvalue())
+                page.insert_image(rect, stream=bio.getvalue(), overlay=True)
 
             # วาดข้อความในตรา (ใช้ภาพที่สร้างไว้แล้ว)
             # ใช้ระยะห่างแบบเดิม
