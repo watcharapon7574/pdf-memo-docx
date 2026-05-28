@@ -51,6 +51,44 @@ def convert_docx_to_pdf(docx_path, output_pdf_path):
     ]
     subprocess.run(cmd, check=True)
 
+
+# --- ฟังก์ชัน compress PDF lossless ด้วย qpdf ---
+# PyMuPDF เวลา rasterize หน้าใหม่ + ใส่ลายเซ็น ทิ้ง orphan objects เยอะ ทำให้ไฟล์
+# โตเรื่อยๆ ทุกรอบที่ผ่าน sign (empirical: 0.3 MB → 6.7 MB สำหรับ 12-page input).
+# qpdf --object-streams=generate --compress-streams=y ลดได้ 10-70× โดย lossless
+# (รักษา visual content เดิมทุกพิกเซล — verified ด้วย MD5 ของ rendered PNG).
+def compress_pdf_inplace(pdf_path, *, timeout_sec=30):
+    """Compress a PDF lossless via qpdf. If qpdf fails for any reason, the file
+    at pdf_path is left untouched so the sign flow doesn't break."""
+    out_path = pdf_path + ".qpdf.tmp"
+    try:
+        result = subprocess.run(
+            [
+                "qpdf",
+                "--object-streams=generate",
+                "--compress-streams=y",
+                "--linearize",
+                pdf_path,
+                out_path,
+            ],
+            capture_output=True,
+            timeout=timeout_sec,
+        )
+        # qpdf returns 0 (success), 3 (success with warnings). Anything else is hard fail.
+        if result.returncode in (0, 3) and os.path.exists(out_path) and os.path.getsize(out_path) > 0:
+            os.replace(out_path, pdf_path)
+        else:
+            print(f"qpdf compress skipped (returncode={result.returncode}): {result.stderr[:200]}")
+            if os.path.exists(out_path):
+                os.unlink(out_path)
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as e:
+        print(f"qpdf compress error (using original): {e}")
+        if os.path.exists(out_path):
+            try:
+                os.unlink(out_path)
+            except OSError:
+                pass
+
 # --- ฟังก์ชันแปลงตัวเลขเป็นเลขไทย ---
 def to_thai_digits(text):
     thai_digits = '๐๑๒๓๔๕๖๗๘๙'
@@ -252,6 +290,7 @@ def generate_pdf():
         tmp_pdf_with_blank = tmp_pdf.replace('.pdf', '_blank.pdf')
         pdf.save(tmp_pdf_with_blank)
         pdf.close()
+        compress_pdf_inplace(tmp_pdf_with_blank)
 
         return send_file(tmp_pdf_with_blank, mimetype="application/pdf", as_attachment=True, download_name="memo.pdf")
     except Exception as e:
@@ -332,6 +371,7 @@ def add_signature():
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_pdf:
             pdf.save(tmp_pdf.name)
         pdf.close()
+        compress_pdf_inplace(tmp_pdf.name)
         return send_file(tmp_pdf.name, mimetype="application/pdf", as_attachment=True, download_name="signed.pdf")
     except Exception as e:
         print(traceback.format_exc())
@@ -714,6 +754,7 @@ def add_signature_v2():
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_pdf:
             pdf.save(tmp_pdf.name)
         pdf.close()
+        compress_pdf_inplace(tmp_pdf.name)
         return send_file(tmp_pdf.name, mimetype="application/pdf", as_attachment=True, download_name="signed.pdf")
     except Exception as e:
         print(traceback.format_exc())
@@ -814,6 +855,7 @@ def generate_2in1_memo():
         # ตรวจสอบว่ามี signatures หรือไม่
         if 'signatures' not in request.form:
             # ถ้าไม่มี signatures ให้ return PDF ธรรมดา
+            compress_pdf_inplace(tmp_pdf)
             return send_file(tmp_pdf, mimetype="application/pdf", as_attachment=True, download_name="memo.pdf")
         
         signatures = json.loads(request.form['signatures'])
@@ -1083,7 +1125,8 @@ def generate_2in1_memo():
         
         # ลบไฟล์ชั่วคราว
         os.unlink(tmp_pdf)
-        
+
+        compress_pdf_inplace(final_pdf_file.name)
         return send_file(final_pdf_file.name, mimetype="application/pdf", as_attachment=True, download_name="signed_memo.pdf")
         
     except Exception as e:
@@ -1128,9 +1171,10 @@ def merge_pdfs():
         # บันทึกไฟล์ที่รวมแล้ว
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as merged_file:
             merged_pdf.save(merged_file.name)
-        
+
         merged_pdf.close()
-        
+        compress_pdf_inplace(merged_file.name)
+
         # ส่งไฟล์กลับ
         return send_file(merged_file.name, mimetype="application/pdf", as_attachment=True, download_name="merged.pdf")
         
@@ -1227,6 +1271,7 @@ def receive_num():
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as outpdf:
             doc.save(outpdf.name)
         doc.close()
+        compress_pdf_inplace(outpdf.name)
         print(f"[DEBUG] PDF saved, sending response...")
 
         response = send_file(outpdf.name, mimetype="application/pdf", as_attachment=True, download_name="receive_num.pdf")
@@ -1325,6 +1370,7 @@ def receive_num2():
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as outpdf:
             doc.save(outpdf.name)
         doc.close()
+        compress_pdf_inplace(outpdf.name)
 
         response = send_file(outpdf.name, mimetype="application/pdf", as_attachment=True, download_name="receive_num2.pdf")
         response.headers['X-Debug'] = 'receive_num2_processed'
@@ -1879,6 +1925,7 @@ def stamp_summary():
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as outpdf:
             doc.save(outpdf.name)
             doc.close()
+            compress_pdf_inplace(outpdf.name)
             print(f"[DEBUG] PDF saved, sending response...")
 
             response = send_file(outpdf.name, mimetype="application/pdf", as_attachment=True, download_name="summary_stamped.pdf")
@@ -2635,6 +2682,7 @@ def add_signature_receive():
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_pdf:
             pdf.save(tmp_pdf.name)
         pdf.close()
+        compress_pdf_inplace(tmp_pdf.name)
 
         print("[DEBUG] PDF saved, sending response...")
         response = send_file(tmp_pdf.name, mimetype="application/pdf", as_attachment=True, download_name="signed_receive.pdf")

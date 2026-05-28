@@ -2,11 +2,13 @@
 FROM python:3.12-slim
 
 # ติดตั้ง dependencies ที่จำเป็น
+# qpdf: ใช้ compress PDF lossless หลัง add_signature (ลด orphan objects 10-70×)
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libreoffice \
         fonts-thai-tlwg \
         fontconfig \
+        qpdf \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
