@@ -1229,18 +1229,6 @@ def receive_num():
         vis_w = page.rect.width
         ps = get_page_scale(page)
         margin = int(20 * ps)
-        frame_width = int(200 * ps)
-        frame_height = int(80 * ps)
-
-        center_x = vis_w - margin - frame_width//2
-        center_y = margin + frame_height//2
-
-        box_rect = fitz.Rect(
-            center_x - frame_width//2, center_y - frame_height//2,
-            center_x + frame_width//2, center_y + frame_height//2
-        )
-        box_color = (color[0]/255, color[1]/255, color[2]/255)
-        draw_visual_rect(page, box_rect, color=box_color, width=2)
 
         def draw_text_img(text, size=16, bold=False):
             fp = bold_font_path if bold else font_path
@@ -1257,11 +1245,25 @@ def receive_num():
             f"วันที่ {date_text} เวลา {time_text}",
             f"ผู้รับ {receiver_text}"
         ]
-        gap = int(16 * ps)
+        # render ก่อน แล้วหา leading จากความสูงจริงของรูปข้อความ — กัน ink บรรทัดซ้อนทุกฉบับ
+        # (เดิม gap=16 เท่า font พอดี ทำให้บรรทัดติดเส้น 0-1px แล้วสุ่มซ้อนในบางฉบับ)
+        text_imgs = [draw_text_img(text, size=16, bold=True) for text in header_lines]
+        frame_width = int(200 * ps)
+        gap = max(img.height for img in text_imgs) + int(2 * ps)
+        frame_height = len(header_lines) * gap + int(16 * ps)
+
+        center_x = vis_w - margin - frame_width//2
+        center_y = margin + frame_height//2
+
+        box_rect = fitz.Rect(
+            center_x - frame_width//2, center_y - frame_height//2,
+            center_x + frame_width//2, center_y + frame_height//2
+        )
+        box_color = (color[0]/255, color[1]/255, color[2]/255)
+        draw_visual_rect(page, box_rect, color=box_color, width=2)
 
         start_y = center_y - ((len(header_lines)-1) * gap // 2)
-        for i, text in enumerate(header_lines):
-            img = draw_text_img(text, size=16, bold=True)
+        for i, img in enumerate(text_imgs):
             left = center_x - img.width//2
             top = start_y + i*gap - img.height//2
             insert_visual_image(page, img, fitz.Rect(left, top, left+img.width, top+img.height))
@@ -1342,7 +1344,8 @@ def receive_num2():
         text_imgs = [draw_text_img(text, size=16, bold=True) for text in header_lines]
         max_text_width = max(img.width for img in text_imgs)
         padding = int(20 * ps)
-        gap = int(16 * ps)
+        # leading จากความสูงจริงของรูปข้อความ — กัน ink บรรทัดซ้อน (เดิม gap=16 เท่า font ทำให้ติดเส้น)
+        gap = max(img.height for img in text_imgs) + int(2 * ps)
 
         frame_width = max_text_width + padding * 2
         frame_height = len(header_lines) * gap + padding
