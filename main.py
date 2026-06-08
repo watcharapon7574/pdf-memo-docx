@@ -1249,7 +1249,11 @@ def receive_num():
         # (เดิม gap=16 เท่า font พอดี ทำให้บรรทัดติดเส้น 0-1px แล้วสุ่มซ้อนในบางฉบับ)
         text_imgs = [draw_text_img(text, size=16, bold=True) for text in header_lines]
         frame_width = int(200 * ps)
-        gap = max(img.height for img in text_imgs) + int(2 * ps)
+        # leading: หัก padding ในตัวภาพ (8px = 4 บน + 4 ล่าง จาก draw_text_image) ออกก่อน
+        # แล้วใส่ระยะหายใจเล็กน้อย — gap >= ความสูง glyph จริงเสมอ จึงไม่ซ้อน
+        # (เดิม gap = img.height + 2 รวม padding 8px เข้าไปด้วย บรรทัดเลยห่างเกิน)
+        inner_pad = 8
+        gap = max(img.height for img in text_imgs) - inner_pad + int(3 * ps)
         frame_height = len(header_lines) * gap + int(16 * ps)
 
         center_x = vis_w - margin - frame_width//2
