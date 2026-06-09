@@ -2703,4 +2703,10 @@ def add_signature_receive():
 
 if __name__ == "__main__":
     # สำหรับ Railway ต้องฟังที่ 0.0.0.0
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    # debug=False: ปิด auto-reloader (กัน connection drop ตอน reloader restart กลางคัน)
+    #              + ปิด Werkzeug interactive debugger (อุดช่อง RCE บน prod)
+    # threaded=True: รับหลาย request พร้อมกันได้แบบเดิม โดยไม่ดัน concurrency เกินที่
+    #                LibreOffice profile lock / RAM จะรับไหว (ดูก่อนค่อยตัดสินใจขึ้น gunicorn)
+    # local dev เปิด debug ได้ผ่าน env: FLASK_DEBUG=1 python main.py
+    debug_mode = os.environ.get("FLASK_DEBUG", "0") == "1"
+    app.run(debug=debug_mode, threaded=True, host="0.0.0.0", port=5000)
