@@ -419,7 +419,7 @@ def add_signature():
 @app.route('/add_signature_v2', methods=['POST'])
 def add_signature_v2():
     # --- ฟังก์ชันวาดข้อความเป็นภาพ (v2) ---
-    def draw_text_image_v2(text, font_path, font_size=20, color=(2, 53, 139), scale=1, font_weight="regular", line_height_ratio=1.2):
+    def draw_text_image_v2(text, font_path, font_size=20, color=(2, 53, 139), scale=1, font_weight="regular", line_height_ratio=1.2, align="left"):
         from PIL import ImageFont, ImageDraw, Image
         # เลือก font ตาม font_weight
         if font_weight == "bold":
@@ -448,13 +448,17 @@ def add_signature_v2():
         img = Image.new("RGBA", (max_width, total_height), (255, 255, 255, 0))
         draw = ImageDraw.Draw(img)
 
+        content_width = max(line_widths)
         y = padding
-        for line in lines:
+        for line, lw in zip(lines, line_widths):
+            # align="center": วางแต่ละบรรทัดกึ่งกลางภายในรูป (ใช้กับ org/role ที่ตัดหลายบรรทัด)
+            # align="left" (default): ชิดซ้ายตามเดิม (comment ฯลฯ)
+            line_x = padding + (content_width - lw) / 2 if align == "center" else padding
             # ใช้ anchor="la" (left-ascender) เพื่อยึดตำแหน่งที่ ascender line
             # ทำให้ทุกบรรทัดวางที่ตำแหน่งเดียวกัน ไม่ว่าจะมี tone marks หรือไม่
             # วาด 2 ครั้งซ้อนกันเพื่อให้เส้นเข้มขึ้น
-            draw.text((padding, y), line, font=font, fill=color, anchor="la")
-            draw.text((padding, y), line, font=font, fill=color, anchor="la")
+            draw.text((line_x, y), line, font=font, fill=color, anchor="la")
+            draw.text((line_x, y), line, font=font, fill=color, anchor="la")
             y += fixed_line_height
 
         return img
@@ -579,7 +583,8 @@ def add_signature_v2():
                                 color = (r, g, b)
                             else:
                                 color = (2, 53, 139)
-                            img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1, font_weight=font_weight, line_height_ratio=line_height_ratio)
+                            align = "left" if sig.get('type') == 'comment' else "center"
+                            img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1, font_weight=font_weight, line_height_ratio=line_height_ratio, align=align)
                             img_byte_arr = io.BytesIO()
                             img.save(img_byte_arr, format='PNG')
                             # ใช้ center positioning ถ้ามี width/height
@@ -722,10 +727,11 @@ def add_signature_v2():
                                     color = (r, g, b)
                                 else:
                                     color = (2, 53, 139)
-                                img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1, font_weight=font_weight, line_height_ratio=line_height_ratio)
+                                align = "left" if line_type == 'comment' else "center"
+                                img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1, font_weight=font_weight, line_height_ratio=line_height_ratio, align=align)
                                 img_byte_arr = io.BytesIO()
                                 img.save(img_byte_arr, format='PNG')
-                                
+
                                 if is_center_positioning:
                                     left_x = center_x - img.width // 2  # คืนค่าเดิม
                                     top_y = current_y
@@ -763,7 +769,8 @@ def add_signature_v2():
                             color = (r, g, b)
                         else:
                             color = (2, 53, 139)
-                        img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1, font_weight=font_weight, line_height_ratio=line_height_ratio)
+                        align = "left" if sig.get('type') == 'comment' else "center"
+                        img = draw_text_image_v2(text, font_path, font_size=font_size, color=color, scale=1, font_weight=font_weight, line_height_ratio=line_height_ratio, align=align)
                         img_byte_arr = io.BytesIO()
                         img.save(img_byte_arr, format='PNG')
                         rect = fitz.Rect(x, current_y, x + img.width, current_y + img.height)
