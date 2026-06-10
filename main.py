@@ -155,6 +155,44 @@ def get_page_scale(page):
     short_side = min(page.rect.width, page.rect.height)
     return short_side / A4_WIDTH_PT
 
+def normalize_to_a4(pdf_bytes, tol=2.0):
+    """แปลงทุกหน้าให้เป็น A4 แนวตั้ง (595.28 x 841.89 pt) แบบ scale-to-fit
+    รักษาสัดส่วนเดิม วางกึ่งกลางบนพื้นขาว — ใช้กับเอกสารรับภายนอกที่ไม่ใช่ A4
+
+    ทำไมต้องบังคับแนวตั้ง: ทั้ง pipeline (frontend คำนวณพิกัดคลิก + get_page_scale
+    ของฝั่งนี้) สมมติหน้าเป็น A4 แนวตั้งเสมอ พอทุกหน้าเป็น 595x842 จริง พิกัดลายเซ็น/
+    ตรายางจึงตรงจุดที่คลิก และ get_page_scale คืน 1.0 ทำให้ขนาดฟอนต์ตรามาตรฐาน
+
+    show_pdf_page คัดลอกเนื้อหาแบบ vector (ไม่ใช่ raster) จึงไม่เสียคุณภาพ
+    ถ้าทุกหน้าเป็น A4 แนวตั้งอยู่แล้ว (visual rect ภายใน tol) คืนเอกสารเดิมโดยไม่แตะ
+    — รวมถึงหน้าที่ visual เป็น A4 แต่มี /Rotate (stamp code เดิม rotation-aware อยู่แล้ว)
+    """
+    src = fitz.open(stream=pdf_bytes, filetype="pdf")
+
+    def is_a4_portrait(r):
+        return abs(r.width - A4_WIDTH_PT) <= tol and abs(r.height - A4_HEIGHT_PT) <= tol
+
+    if all(is_a4_portrait(pg.rect) for pg in src):
+        return src
+
+    out = fitz.open()
+    for pg in src:
+        # show_pdf_page ไม่เคารพ /Rotate ของหน้าต้นทาง (เทสยืนยัน — หน้าหมุนจะวางผิดมุม)
+        # ต้อง bake การหมุนเข้า geometry ก่อน ด้วย remove_rotation() แล้ว rect จะตรง visual
+        if pg.rotation and hasattr(pg, "remove_rotation"):
+            pg.remove_rotation()
+        r = pg.rect
+        new_page = out.new_page(width=A4_WIDTH_PT, height=A4_HEIGHT_PT)
+        scale = min(A4_WIDTH_PT / r.width, A4_HEIGHT_PT / r.height)
+        tw, th = r.width * scale, r.height * scale
+        ox = (A4_WIDTH_PT - tw) / 2
+        oy = (A4_HEIGHT_PT - th) / 2
+        target = fitz.Rect(ox, oy, ox + tw, oy + th)
+        # target อัตราส่วนเท่าต้นฉบับ จึงไม่บิดเบี้ยว
+        new_page.show_pdf_page(target, src, pg.number)
+    src.close()
+    return out
+
 def visual_to_mb_rect(page, vis_rect):
     """แปลง visual rect → mediabox rect ด้วย derotation_matrix"""
     if page.rotation == 0:
@@ -1211,9 +1249,11 @@ def receive_num():
         color = tuple(p.get('color', [2,53,139]))
         print(f"[DEBUG] Page: {page_no}, color: {color}")
 
-        # เปิด PDF
+        # เปิด PDF + แปลงเป็น A4 แนวตั้งถ้าไม่ใช่ A4 (เอกสารรับภายนอกมักขนาดแปลก)
+        # ทำที่นี่เพราะ /receive_num คือจุดที่ไฟล์รับภายนอกเข้าระบบครั้งแรก
+        # พอ normalize ก่อนประทับเลข ไฟล์ที่เก็บลง storage จะเป็น A4 → display/คลิก/เซ็นตรงกันหมด
         pdf_bytes = request.files['pdf'].read()
-        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        doc = normalize_to_a4(pdf_bytes)
         if page_no >= len(doc):
             return jsonify({'error': 'Page out of range'}), 400
         page = doc[page_no]
